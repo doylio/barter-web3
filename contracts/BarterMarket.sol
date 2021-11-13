@@ -10,7 +10,7 @@ contract BarterWalletFactory {
     SENT,
     INPROGRESS,
     ACCEPTED,
-    REJECTED
+    RECALLED
   }
 
   struct NFTBundle {
@@ -46,10 +46,10 @@ contract BarterWalletFactory {
   uint256 public offerCount;
   mapping(uint256 => TradeOffer) public offers;
   // walletAddress => erc20Address => amount
-  mapping(address => mapping(address => uint256)) public coinsApprovedInOffers;
+  mapping(address => mapping(address => uint256)) public committedTokens;
   // walletAddress => erc721Address => => tokenId => approved
   mapping(address => mapping(address => mapping(uint256 => bool)))
-    public nftsApprovedInOffers;
+    public committedNFTs;
 
   constructor() {}
 
@@ -94,12 +94,12 @@ contract BarterWalletFactory {
       require(
         coinContract.allowance(msg.sender, address(this)) >=
           _offerCoinAmounts[i] +
-            coinsApprovedInOffers[msg.sender][_offerCoinAddresses[i]],
+            committedTokens[msg.sender][_offerCoinAddresses[i]],
         "Not enough tokens to make the offer"
       );
-      coinsApprovedInOffers[msg.sender][
-        _offerCoinAddresses[i]
-      ] += _offerCoinAmounts[i];
+      committedTokens[msg.sender][_offerCoinAddresses[i]] += _offerCoinAmounts[
+        i
+      ];
     }
 
     // Check that NFTs have been approved
@@ -114,14 +114,11 @@ contract BarterWalletFactory {
         "Not approved for all NFT transfers"
       );
       require(
-        nftsApprovedInOffers[msg.sender][_offerNFTAddresses[i]][
-          _offerNFTIds[i]
-        ] == false,
+        committedNFTs[msg.sender][_offerNFTAddresses[i]][_offerNFTIds[i]] ==
+          false,
         "Already committed to another offer"
       );
-      nftsApprovedInOffers[msg.sender][_offerNFTAddresses[i]][
-        _offerNFTIds[i]
-      ] = true;
+      committedNFTs[msg.sender][_offerNFTAddresses[i]][_offerNFTIds[i]] = true;
     }
 
     // Create the offer
@@ -158,10 +155,34 @@ contract BarterWalletFactory {
   // Send the NFTs to the offerer address
   // Send the ETH to the offerer address
 
-  // TODO: add a function to recind offer you already made
-  // Check that the offer is in a state of SENT or INPROGRESS
-  // Change the state to REJECTED
-  // Emit an event of the offer being rejected
+  function recallOffer(uint256 _offerId) public {
+    require(offers[_offerId].offerer == msg.sender, "Offer not created by you");
+    require(
+      offers[_offerId].state == State.SENT,
+      "Offer is not in the SENT state"
+    );
+    offers[_offerId].state = State.RECALLED;
+
+    // Remove offered amount from committed coins
+    CoinBundle memory offerCoins = offers[_offerId].offerBundle.tokens;
+    for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
+      committedTokens[msg.sender][offerCoins.contractAddresses[i]] -= offerCoins
+        .amounts[i];
+    }
+
+    // Remove NFTs from committed NFTs
+    NFTBundle memory offerNfts = offers[_offerId].offerBundle.nfts;
+    for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
+      committedNFTs[msg.sender][offerNfts.contractAddresses[i]][
+        offerNfts.ids[i]
+      ] = false;
+    }
+
+    emit TradeOfferRecalled(_offerId, msg.sender, offers[_offerId].target);
+
+    // Return the ETH sent to the contract
+    payable(msg.sender).transfer(offers[_offerId].offerBundle.offeredEther);
+  }
 
   // TODO: add a view function to get all offers made to you
 
