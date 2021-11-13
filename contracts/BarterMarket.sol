@@ -144,14 +144,11 @@ contract BarterWalletFactory {
   // Check that all assets have been approved for transfer
   // Check that ETH balances are sufficient
   // Check that the offer is still in the SENT state
-  // Update the state to INPROGRESS
+  // Send the ETH, tokens and NFTs to the target
+  // Sent the ETH, tokens and NFTs to the offerer
+  // Reset committed tokens and NFTs
+  // Change the state to ACCEPTED
   // Emit an event of a TradeOffer being accepted
-  // Send the tokens to the target address
-  // Send the NFTs to the target address
-  // Send the ETH to the target address
-  // Send the tokens to the offerer address
-  // Send the NFTs to the offerer address
-  // Send the ETH to the offerer address
 
   function recallOffer(uint256 _offerId) public {
     require(offers[_offerId].offerer == msg.sender, "Offer not created by you");
