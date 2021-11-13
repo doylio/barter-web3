@@ -47,9 +47,8 @@ contract BarterWalletFactory {
   mapping(uint256 => TradeOffer) public offers;
   // walletAddress => erc20Address => amount
   mapping(address => mapping(address => uint256)) public committedTokens;
-  // walletAddress => erc721Address => => tokenId => approved
-  mapping(address => mapping(address => mapping(uint256 => bool)))
-    public committedNFTs;
+  // erc721Address => tokenId => approved
+  mapping(address => mapping(uint256 => bool)) public committedNFTs;
 
   constructor() {}
 
@@ -114,11 +113,10 @@ contract BarterWalletFactory {
         "Not approved for all NFT transfers"
       );
       require(
-        committedNFTs[msg.sender][_offerNFTAddresses[i]][_offerNFTIds[i]] ==
-          false,
+        committedNFTs[_offerNFTAddresses[i]][_offerNFTIds[i]] == false,
         "Already committed to another offer"
       );
-      committedNFTs[msg.sender][_offerNFTAddresses[i]][_offerNFTIds[i]] = true;
+      committedNFTs[_offerNFTAddresses[i]][_offerNFTIds[i]] = true;
     }
 
     // Create the offer
@@ -173,9 +171,7 @@ contract BarterWalletFactory {
     // Remove NFTs from committed NFTs
     NFTBundle memory offerNfts = offers[_offerId].offerBundle.nfts;
     for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
-      committedNFTs[msg.sender][offerNfts.contractAddresses[i]][
-        offerNfts.ids[i]
-      ] = false;
+      committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
     }
 
     emit TradeOfferRecalled(_offerId, msg.sender, offers[_offerId].target);
