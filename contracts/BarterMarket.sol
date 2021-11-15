@@ -155,23 +155,35 @@ contract BarterWalletFactory {
 			offer.state == State.SENT,
 			"This offer is no longer available"
 		);
+		
+		// State should be set before transfer i think https://medium.com/coinmonks/common-attacks-in-solidity-and-how-to-defend-against-them-9bc3994c7c18
+		// If anything fails all state changes will be reverted anyways, kind of like a db transaction
+		offers[_offerId].state = State.ACCEPTED;
 
-		// Check that the target's assets are approved for the trade
+		// Check that the target's assets are approved for the trade, then transfer
 		CoinBundle memory askCoins = offer.askBundle.tokens;			
 		NFTBundle memory askNfts = offer.askBundle.nfts;
 
 		for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
 			ERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
+			
+			require(
+				coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
+				"Not enough tokens"
+			);
 			require(
 				coinContract.allowance(msg.sender, address(this)) >=
 					askCoins.amounts[i] +
 						committedTokens[msg.sender][askCoins.contractAddresses[i]],
-				"Not enough tokens to accept this offer"
+				"Not enough allowed tokens"
 			);
+
+			coinContract.transferFrom(offer.offerer, offer.target, askCoins.amounts[i]);
 		}
 
 		for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
 			ERC721 nftContract = ERC721(askNfts.contractAddresses[i]);
+
 			require(
 				nftContract.ownerOf(askNfts.ids[i]) == msg.sender,
 				"You no longer own this nft"
@@ -184,23 +196,34 @@ contract BarterWalletFactory {
 				committedNFTs[askNfts.contractAddresses[i]][askNfts.ids[i]] == false,
 				"Already committed to another offer"
 			);
+
+			nftContract.transferFrom(offer.offerer, offer.target, askNfts.ids[i]);
 		}
 
-		// Double check offerer's assets are approved as approvals can be revoked
+		// Double check offerer's assets are approved as approvals can be revoked, then transfer
 		CoinBundle memory offerCoins = offer.offerBundle.tokens;
 		NFTBundle memory offerNfts = offer.offerBundle.nfts;
 
 		for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
 			ERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+
+			require(
+				coinContract.balanceOf(offer.offerer) >= offerCoins.amounts[i],
+				"Not enough tokens"
+			);
 			require(
 				coinContract.allowance(offer.offerer, address(this)) >=
 					offerCoins.amounts[i],
-				"offerer doesn't have enough tokens to complete the trade anymore"
+				"not enough allowed tokens"
 			);
+
+			committedTokens[offer.offerer][offerCoins.contractAddresses[i]] -= offerCoins.amounts[i];
+			coinContract.transferFrom(offer.offerer, offer.target, offerCoins.amounts[i]);
 		}
 
     for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
       ERC721 nftContract = ERC721(offerNfts.contractAddresses[i]);
+
       require(
         nftContract.ownerOf(offerNfts.ids[i]) == offer.offerer,
         "Not the offerers NFT anymore"
@@ -209,40 +232,17 @@ contract BarterWalletFactory {
         nftContract.isApprovedForAll(offer.offerer, address(this)),
         "Not approved for all NFT transfers"
       );
+
+			committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
+			nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
     }
 
-		// State should be set before transfer i think https://medium.com/coinmonks/common-attacks-in-solidity-and-how-to-defend-against-them-9bc3994c7c18
-		offers[_offerId].state = State.ACCEPTED;
-
-		// Send the offer to the target
-		for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
-			committedTokens[offer.offerer][offerCoins.contractAddresses[i]] -= offerCoins.amounts[i];
-			ERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
-			coinContract.transferFrom(offer.offerer, offer.target, offerCoins.amounts[i]);
-		}
-
-		for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
-			committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
-			ERC721 nftContract = ERC721(offerNfts.contractAddresses[i]);
-			nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
-		}
-
-		// Send the ask to the offerer
-		for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
-			ERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
-			coinContract.transferFrom(offer.offerer, offer.target, askCoins.amounts[i]);
-		}
-
-		for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
-			ERC721 nftContract = ERC721(askNfts.contractAddresses[i]);
-			nftContract.transferFrom(offer.offerer, offer.target, askNfts.ids[i]);
-		}
-
 		require(
-       offer.askBundle.offeredEther + offer.offerBundle.offeredEther <= address(this).balance,
-      "Not enough eth in contract"
+       offer.offerBundle.offeredEther <= address(this).balance,
+      "Not enough eth in contract!"
     );
-		payable(offer.offerer).transfer(offer.askBundle.offeredEther);
+
+		payable(offer.offerer).transfer(msg.value);
 		payable(offer.target).transfer(offer.offerBundle.offeredEther);
 
 		emit TradeOfferAccepted(_offerId, offer.offerer, offer.target);
