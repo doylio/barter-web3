@@ -7,12 +7,12 @@ export enum OfferState {
   RECALLED,
 }
 
-const weiInEth = BigNumber.from(10).pow(18);
+export const weiInEth = BigNumber.from(10).pow(18);
 
-// Work with JSON, pass the smart contract arrays.
+// Work with JSON, smart contract outputs arrays
 
 export interface CoinBundleJSON {
-  amounts: number[];
+  amounts: BigNumber[];
   contractAddresses: string[];
 }
 
@@ -21,7 +21,7 @@ export type CoinBundleArray = [BigNumber[], string[]];
 export const coinBundleArrayToJSON = (
   arr: CoinBundleArray
 ): CoinBundleJSON => ({
-  amounts: arr[0].map((n) => n.toNumber()),
+  amounts: arr[0],
   contractAddresses: arr[1],
 });
 
@@ -31,24 +31,24 @@ export const coinBundleJSONToArray = (j: CoinBundleJSON): CoinBundleArray => [
 ];
 
 export interface NFTBundleJSON {
-  ids: number[];
+  ids: BigNumber[];
   contractAddresses: string[];
 }
 
 export type NFTBundleArray = [BigNumber[], string[]];
 
 export const nftBundleArrayToJSON = (arr: NFTBundleArray): NFTBundleJSON => ({
-  ids: arr[0].map((n) => n.toNumber()),
+  ids: arr[0],
   contractAddresses: arr[1],
 });
 
 export const nftBundleJSONToArray = (j: NFTBundleJSON): NFTBundleArray => [
-  j.ids.map((n) => BigNumber.from(n)),
+  j.ids,
   j.contractAddresses,
 ];
 
 export interface BundleJSON {
-  offeredEther: number;
+  offeredEther: BigNumber;
   tokens: CoinBundleJSON;
   nfts: NFTBundleJSON;
 }
@@ -56,7 +56,7 @@ export interface BundleJSON {
 export type BundleArray = [BigNumber, CoinBundleArray, NFTBundleArray];
 
 export const bundleArrayToJSON = (arr: BundleArray): BundleJSON => ({
-  offeredEther: arr[0].div(weiInEth).toNumber(),
+  offeredEther: arr[0],
   tokens: coinBundleArrayToJSON(arr[1]),
   nfts: nftBundleArrayToJSON(arr[2]),
 });
