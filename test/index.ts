@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { MockERC20, MockERC721 } from "../typechain";
+import { BarterWalletFactory, MockERC20, MockERC721 } from "../typechain";
 import {
   BundleJSON,
   CoinBundleJSON,
@@ -15,6 +15,7 @@ import {
 describe("BarterMarket", function () {
   let ERC20: MockERC20;
   let ERC721: MockERC721;
+  let barterMarket: BarterWalletFactory;
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
@@ -35,6 +36,14 @@ describe("BarterMarket", function () {
     await ERC721.deployed();
 
     console.log("ERC721 Deployed", ERC721.address);
+
+    const barterMarketFactory = await ethers.getContractFactory(
+      "BarterWalletFactory"
+    );
+    barterMarket = await barterMarketFactory.deploy();
+    await barterMarket.deployed();
+
+    console.log("BarterWallet Deployed");
 
     // Transfer ERC20 tokens to accounts
     await ERC20.transfer(account1.address, 1000);
@@ -62,12 +71,6 @@ describe("BarterMarket", function () {
   });
 
   it("can send a basic offer", async function () {
-    const barterMarketFactory = await ethers.getContractFactory(
-      "BarterWalletFactory"
-    );
-    const barterMarket = await barterMarketFactory.deploy();
-    await barterMarket.deployed();
-
     // Define Offer
     const offerCoins: CoinBundleJSON = {
       amounts: [100],
