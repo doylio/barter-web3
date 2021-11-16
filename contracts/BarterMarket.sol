@@ -72,7 +72,7 @@ contract BarterWalletFactory {
     uint256[] memory _askCoinAmounts = askBundle.tokens.amounts;
     address[] memory _askNFTAddresses = askBundle.nfts.contractAddresses;
     uint256[] memory _askNFTIds = askBundle.nfts.ids;
-
+		
     require(_target != address(0), "Target address is invalid");
     require(
       _offerEth == msg.value,
@@ -98,7 +98,7 @@ contract BarterWalletFactory {
     // Check that enough tokens have been approved
     for (uint256 i = 0; i < _offerCoinAddresses.length; i++) {
       ERC20 coinContract = ERC20(_offerCoinAddresses[i]);
-      require(
+			require(
         coinContract.allowance(msg.sender, address(this)) >=
           _offerCoinAmounts[i] +
             committedTokens[msg.sender][_offerCoinAddresses[i]],
@@ -150,7 +150,7 @@ contract BarterWalletFactory {
 
 	function acceptOffer(uint256 _offerId) public payable {
 		TradeOffer memory offer = offers[_offerId];
-
+		
 		require(
 			offer.target == msg.sender, 
 			"This offer was not sent to you"
@@ -180,13 +180,13 @@ contract BarterWalletFactory {
 				"Not enough tokens"
 			);
 			require(
-				coinContract.allowance(msg.sender, address(this)) >=
+				coinContract.allowance(offer.target, address(this)) >=
 					askCoins.amounts[i] +
-						committedTokens[msg.sender][askCoins.contractAddresses[i]],
+						committedTokens[offer.target][askCoins.contractAddresses[i]],
 				"Not enough allowed tokens"
 			);
 
-			coinContract.transferFrom(offer.offerer, offer.target, askCoins.amounts[i]);
+			coinContract.transferFrom(offer.target, offer.offerer, askCoins.amounts[i]);
 		}
 
 		for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
@@ -205,7 +205,7 @@ contract BarterWalletFactory {
 				"Already committed to another offer"
 			);
 
-			nftContract.transferFrom(offer.offerer, offer.target, askNfts.ids[i]);
+			nftContract.safeTransferFrom(offer.target, offer.offerer, askNfts.ids[i]);
 		}
 
 		// Double check offerer's assets are approved as approvals can be revoked, then transfer
