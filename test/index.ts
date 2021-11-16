@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("BarterMarket", function () {
-  before(async function () {
+  beforeEach(async function () {
     const [owner, account1, account2] = await ethers.getSigners();
 
     // Deploy Mock ERC20 Contract
@@ -40,6 +40,14 @@ describe("BarterMarket", function () {
     this.account2 = account2;
     this.erc721 = ERC721;
     this.erc20 = ERC20;
+  });
+
+  it("Account1 should have a balance of 1000 ERC20", async function () {
+    expect(await this.erc20.balanceOf(this.account1.address)).to.equal(1000);
+  });
+
+  it("Account2 should have a balance of 2000 ERC20", async function () {
+    expect(await this.erc20.balanceOf(this.account2.address)).to.equal(2000);
   });
 
   it("Account1 should have a balance of 1000 ERC20", async function () {
