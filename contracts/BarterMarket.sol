@@ -54,17 +54,25 @@ contract BarterWalletFactory {
 
   function createOffer(
     address payable _target,
-    uint256 _offerEth,
-    address[] calldata _offerCoinAddresses,
-    uint256[] calldata _offerCoinAmounts,
-    address[] calldata _offerNFTAddresses,
-    uint256[] calldata _offerNFTIds,
-    uint256 _askEth,
-    address[] calldata _askCoinAddresses,
-    uint256[] calldata _askCoinAmounts,
-    address[] calldata _askNFTAddresses,
-    uint256[] calldata _askNFTIds
-  ) public payable {
+    Bundle calldata offerBundle,
+    Bundle calldata askBundle
+    ) public payable {
+    // Destructure bundles
+    uint256 _offerEth = offerBundle.offeredEther;
+    address[] memory _offerCoinAddresses = offerBundle
+        .tokens
+        .contractAddresses;
+    uint256[] memory _offerCoinAmounts = offerBundle.tokens.amounts;
+    address[] memory _offerNFTAddresses = offerBundle
+        .nfts
+        .contractAddresses;
+    uint256[] memory _offerNFTIds = offerBundle.nfts.ids;
+    uint256 _askEth = askBundle.offeredEther;
+    address[] memory _askCoinAddresses = askBundle.tokens.contractAddresses;
+    uint256[] memory _askCoinAmounts = askBundle.tokens.amounts;
+    address[] memory _askNFTAddresses = askBundle.nfts.contractAddresses;
+    uint256[] memory _askNFTIds = askBundle.nfts.ids;
+
     require(_target != address(0), "Target address is invalid");
     require(
       _offerEth == msg.value,
