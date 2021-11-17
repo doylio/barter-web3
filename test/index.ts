@@ -19,7 +19,6 @@ describe("BarterMarket", function () {
   let ERC20B: MockERC20;
   let ERC721: MockERC721;
   let ERC721B: MockERC721;
-
   let barterMarket: BarterWalletFactory;
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
@@ -156,8 +155,8 @@ describe("BarterMarket", function () {
     const a1InitialBalance = await account1.getBalance();
     const a2InitialBalance = await account2.getBalance();
 
-    console.log(ethers.utils.formatEther(await account1.getBalance()));
-    console.log(ethers.utils.formatEther(await account2.getBalance()));
+    let a1GasFees = BigNumber.from(0);
+    let a2GasFees = BigNumber.from(0);
 
     // Define Offer
     const offerCoins: CoinBundleJSON = {
@@ -177,11 +176,16 @@ describe("BarterMarket", function () {
     };
 
     // Account 1 allows contract to trade coins and nfts
-    await ERC20.connect(account1).approve(barterMarket.address, 100);
-    await ERC721.connect(account1).setApprovalForAll(
+    let txn = await ERC20.connect(account1).approve(barterMarket.address, 100);
+    let receipt = await txn.wait();
+    a1GasFees = a1GasFees.add(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+
+    txn = await ERC721.connect(account1).setApprovalForAll(
       barterMarket.address,
       true
     );
+    receipt = await txn.wait();
+    a1GasFees = a1GasFees.add(receipt.gasUsed.mul(receipt.effectiveGasPrice));
 
     // Define Ask
     const askCoins: CoinBundleJSON = {
@@ -200,20 +204,29 @@ describe("BarterMarket", function () {
       nfts: askNfts,
     };
 
-    await barterMarket
+    txn = await barterMarket
       .connect(account1)
       .createOffer(account2.address, offerBundle, askBundle, {
         value: ethers.utils.parseEther("1.0"),
       });
+    receipt = await txn.wait();
+    a1GasFees = a1GasFees.add(receipt.gasUsed.mul(receipt.effectiveGasPrice));
 
     // Account 2 allows contract to trade coins and nfts
-    await ERC20B.connect(account2).approve(barterMarket.address, 50);
-    await ERC721B.connect(account2).setApprovalForAll(
+    txn = await ERC20B.connect(account2).approve(barterMarket.address, 50);
+    receipt = await txn.wait();
+    a2GasFees = a2GasFees.add(receipt.gasUsed.mul(receipt.effectiveGasPrice));
+
+    txn = await ERC721B.connect(account2).setApprovalForAll(
       barterMarket.address,
       true
     );
+    receipt = await txn.wait();
+    a2GasFees = a2GasFees.add(receipt.gasUsed.mul(receipt.effectiveGasPrice));
 
-    await barterMarket.connect(account2).acceptOffer(0);
+    txn = await barterMarket.connect(account2).acceptOffer(0);
+    receipt = await txn.wait();
+    a2GasFees = a2GasFees.add(receipt.gasUsed.mul(receipt.effectiveGasPrice));
 
     expect(await ERC20.balanceOf(account1.address)).to.equal(900);
     expect(await ERC20.balanceOf(account2.address)).to.equal(2100);
@@ -222,5 +235,34 @@ describe("BarterMarket", function () {
 
     expect(await ERC721.ownerOf(1)).to.equal(account2.address);
     expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
+
+    const a1CurrentBalance = await account1.getBalance();
+    const a2CurrentBalance = await account2.getBalance();
+
+    const amountTransfered = offerBundle.offeredEther;
+
+    console.log("\nStarting Balances:");
+    console.log("account 1: " + ethers.utils.formatEther(a1InitialBalance));
+    console.log(
+      "account 2: " + ethers.utils.formatEther(a2InitialBalance) + "\n"
+    );
+
+    console.log("\nGas Fees:");
+    console.log("account 1: " + ethers.utils.formatEther(a1GasFees));
+    console.log("account 2: " + ethers.utils.formatEther(a2GasFees) + "\n");
+
+    console.log("\nEnding Balances:");
+    console.log("account 1: " + ethers.utils.formatEther(a1CurrentBalance));
+    console.log(
+      "account 2: " + ethers.utils.formatEther(a2CurrentBalance) + "\n"
+    );
+
+    expect(a2CurrentBalance).to.equal(
+      a2InitialBalance.add(amountTransfered).sub(a2GasFees)
+    );
+
+    expect(a1CurrentBalance).to.equal(
+      a1InitialBalance.sub(amountTransfered).sub(a1GasFees)
+    );
   });
 });
