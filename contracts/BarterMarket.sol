@@ -91,38 +91,6 @@ contract BarterMarket {
       "Ask NFT address and ID arrays are not the same length"
     );
 
-    // Check that enough tokens have been approved
-    for (uint256 i = 0; i < _offerCoinAddresses.length; i++) {
-      ERC20 coinContract = ERC20(_offerCoinAddresses[i]);
-      require(
-        coinContract.allowance(msg.sender, address(this)) >=
-          _offerCoinAmounts[i] +
-            committedTokens[msg.sender][_offerCoinAddresses[i]],
-        "Not enough tokens approved to make the offer"
-      );
-      committedTokens[msg.sender][_offerCoinAddresses[i]] += _offerCoinAmounts[
-        i
-      ];
-    }
-
-    // Check that NFTs have been approved
-    for (uint256 i = 0; i < _offerNFTAddresses.length; i++) {
-      ERC721 nftContract = ERC721(_offerNFTAddresses[i]);
-      require(
-        nftContract.ownerOf(_offerNFTIds[i]) == msg.sender,
-        "Not your NFT"
-      );
-      require(
-        nftContract.isApprovedForAll(msg.sender, address(this)),
-        "Not approved for all NFT transfers"
-      );
-      require(
-        committedNFTs[_offerNFTAddresses[i]][_offerNFTIds[i]] == false,
-        "Already committed to another offer"
-      );
-      committedNFTs[_offerNFTAddresses[i]][_offerNFTIds[i]] = true;
-    }
-
     // Create the offer
     offers[offerCount] = TradeOffer(
       payable(msg.sender),
@@ -286,4 +254,6 @@ contract BarterMarket {
   // TODO: add a view function to get all offers made to you
 
   // TODO: add a view function to get all offers made by you
+
+  // TODO: add a view function to check that an offer is valid
 }

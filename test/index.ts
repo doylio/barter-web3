@@ -145,6 +145,61 @@ describe("BarterMarket", function () {
       expect(offerJSON).to.eql(expectedOffer);
     });
 
+    it("should accept a complicated offer", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100), BigNumber.from(50)],
+          contractAddresses: [ERC20A.address, ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1), BigNumber.from(2), BigNumber.from(12)],
+          contractAddresses: [
+            ERC721A.address,
+            ERC721A.address,
+            ERC721B.address,
+          ],
+        },
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("2.0"),
+        tokens: {
+          amounts: [BigNumber.from(50), BigNumber.from(100)],
+          contractAddresses: [ERC20B.address, ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(3), BigNumber.from(13), BigNumber.from(15)],
+          contractAddresses: [
+            ERC721B.address,
+            ERC721A.address,
+            ERC721A.address,
+          ],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: ethers.utils.parseEther("1.0"),
+        });
+
+      expect(await barterMarket.offerCount()).to.eq(1);
+
+      const offer: TradeOfferArray = await barterMarket.offers(0);
+      const offerJSON = TradeOfferArrayToJSON(offer);
+
+      const expectedOfferJSON: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+
+      expect(offerJSON).to.deep.eq(expectedOfferJSON);
+    });
+
     it("should revert an offer to the zero address", () => {
       const offerBundle: BundleJSON = {
         offeredEther: ethers.utils.parseEther("1.0"),
@@ -500,11 +555,6 @@ describe("BarterMarket", function () {
         "Ask NFT address and ID arrays are not the same length"
       );
     });
-
-    // TODO: Test token approval
-    // TODO: Test NFT approval
-    // TODO: Create some complex offers
-    // TODO: Malicious offer?
   });
 
   describe("acceptOffer", () => {
