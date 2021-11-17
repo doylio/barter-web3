@@ -45,10 +45,6 @@ contract BarterMarket {
 
   uint256 public offerCount;
   mapping(uint256 => TradeOffer) public offers;
-  // walletAddress => erc20Address => amount
-  mapping(address => mapping(address => uint256)) public committedTokens;
-  // erc721Address => tokenId => approved
-  mapping(address => mapping(uint256 => bool)) public committedNFTs;
 
   constructor() {}
 
@@ -139,8 +135,7 @@ contract BarterMarket {
       );
       require(
         coinContract.allowance(offer.target, address(this)) >=
-          askCoins.amounts[i] +
-            committedTokens[offer.target][askCoins.contractAddresses[i]],
+          askCoins.amounts[i],
         "Not enough allowed tokens"
       );
 
@@ -161,10 +156,6 @@ contract BarterMarket {
       require(
         nftContract.isApprovedForAll(msg.sender, address(this)),
         "Not approved for all NFT transfers"
-      );
-      require(
-        committedNFTs[askNfts.contractAddresses[i]][askNfts.ids[i]] == false,
-        "Already committed to another offer"
       );
 
       nftContract.safeTransferFrom(offer.target, offer.offerer, askNfts.ids[i]);
@@ -187,9 +178,6 @@ contract BarterMarket {
         "not enough allowed tokens"
       );
 
-      committedTokens[offer.offerer][
-        offerCoins.contractAddresses[i]
-      ] -= offerCoins.amounts[i];
       coinContract.transferFrom(
         offer.offerer,
         offer.target,
@@ -209,7 +197,6 @@ contract BarterMarket {
         "Not approved for all NFT transfers"
       );
 
-      committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
       nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
     }
 
@@ -231,19 +218,6 @@ contract BarterMarket {
       "Offer is not in the SENT state"
     );
     offers[_offerId].state = State.RECALLED;
-
-    // Remove offered amount from committed coins
-    CoinBundle memory offerCoins = offers[_offerId].offerBundle.tokens;
-    for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
-      committedTokens[msg.sender][offerCoins.contractAddresses[i]] -= offerCoins
-        .amounts[i];
-    }
-
-    // Remove NFTs from committed NFTs
-    NFTBundle memory offerNfts = offers[_offerId].offerBundle.nfts;
-    for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
-      committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
-    }
 
     emit TradeOfferRecalled(_offerId, msg.sender, offers[_offerId].target);
 

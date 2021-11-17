@@ -2,7 +2,7 @@ import { BigNumber } from "@ethersproject/bignumber";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { BarterMarket, ERC20, MockERC20, MockERC721 } from "../typechain";
+import { BarterMarket, MockERC20, MockERC721 } from "../typechain";
 import {
   BundleJSON,
   CoinBundleJSON,
@@ -24,9 +24,10 @@ describe("BarterMarket", function () {
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
+  let account3: SignerWithAddress;
 
   beforeEach(async function () {
-    [owner, account1, account2] = await ethers.getSigners();
+    [owner, account1, account2, account3] = await ethers.getSigners();
 
     // Deploy Mock ERC20 Contract
     const ERC20Factory = await ethers.getContractFactory("MockERC20");
@@ -560,16 +561,381 @@ describe("BarterMarket", function () {
   describe("acceptOffer", () => {
     it("can accept a basic offer", async function () {
       // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
       const offerBundle: BundleJSON = {
         offeredEther: ethers.utils.parseEther("1.0"),
-        tokens: {
-          amounts: [BigNumber.from(100)],
-          contractAddresses: [ERC20A.address],
-        },
-        nfts: {
-          ids: [BigNumber.from(1)],
-          contractAddresses: [ERC721A.address],
-        },
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(() =>
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.changeEtherBalances(
+        [account1, account2],
+        [0, offerBundle.offeredEther]
+      );
+
+      expect(await ERC20A.balanceOf(account1.address)).to.equal(900);
+      expect(await ERC20A.balanceOf(account2.address)).to.equal(2100);
+      expect(await ERC20B.balanceOf(account1.address)).to.equal(2050);
+      expect(await ERC20B.balanceOf(account2.address)).to.equal(950);
+
+      expect(await ERC721A.ownerOf(1)).to.equal(account2.address);
+      expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
+    });
+
+    it("can accept an offer and trade only coins", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [],
+        contractAddresses: [],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [],
+        contractAddresses: [],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle);
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+
+      await expect(() =>
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.changeEtherBalances([account1, account2], [0, 0]);
+
+      expect(await ERC20A.balanceOf(account1.address)).to.equal(900);
+      expect(await ERC20A.balanceOf(account2.address)).to.equal(2100);
+      expect(await ERC20B.balanceOf(account1.address)).to.equal(2050);
+      expect(await ERC20B.balanceOf(account2.address)).to.equal(950);
+    });
+
+    it("can accept an offer and trade only nfts", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [],
+        contractAddresses: [],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [],
+        contractAddresses: [],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle);
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(() =>
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.changeEtherBalances([account1, account2], [0, 0]);
+
+      expect(await ERC721A.ownerOf(1)).to.equal(account2.address);
+      expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
+    });
+
+    it("can accept an offer with only eth", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [],
+        contractAddresses: [],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [],
+        contractAddresses: [],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(() =>
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.changeEtherBalances(
+        [account1, account2],
+        [0, offerBundle.offeredEther]
+      );
+
+      expect(await ERC20B.balanceOf(account1.address)).to.equal(2050);
+      expect(await ERC20B.balanceOf(account2.address)).to.equal(950);
+
+      expect(await ERC721A.ownerOf(1)).to.equal(account1.address);
+      expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
+    });
+
+    it("can accept an empty offer", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [],
+        contractAddresses: [],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [],
+        contractAddresses: [],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle);
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(() =>
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.changeEtherBalances([account1, account2], [0, 0]);
+
+      expect(await ERC20B.balanceOf(account1.address)).to.equal(2050);
+      expect(await ERC20B.balanceOf(account2.address)).to.equal(950);
+
+      expect(await ERC721A.ownerOf(1)).to.equal(account1.address);
+      expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
+    });
+
+    it("can trade amounts different sums of eth ", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [],
+        contractAddresses: [],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [],
+        contractAddresses: [],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [],
+        contractAddresses: [],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [],
+        contractAddresses: [],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0.5"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      await expect(() =>
+        barterMarket
+          .connect(account2)
+          .acceptOffer(0, { value: askBundle.offeredEther })
+      ).to.changeEtherBalances(
+        [account1, account2],
+        [
+          askBundle.offeredEther,
+          offerBundle.offeredEther.sub(askBundle.offeredEther),
+        ]
+      );
+    });
+
+    it("Ensures offer was made to the person calling the function", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
       };
 
       // Account 1 allows contract to trade coins and nfts
@@ -580,16 +946,20 @@ describe("BarterMarket", function () {
       );
 
       // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
       const askBundle: BundleJSON = {
         offeredEther: ethers.utils.parseEther("0"),
-        tokens: {
-          amounts: [BigNumber.from(50)],
-          contractAddresses: [ERC20B.address],
-        },
-        nfts: {
-          ids: [BigNumber.from(1)],
-          contractAddresses: [ERC721B.address],
-        },
+        tokens: askCoins,
+        nfts: askNfts,
       };
 
       await barterMarket
@@ -605,15 +975,374 @@ describe("BarterMarket", function () {
         true
       );
 
+      await expect(
+        barterMarket.connect(account3).acceptOffer(0)
+      ).to.be.revertedWith("This offer was not sent to you");
+    });
+
+    it("Ensures enough eth is sent when accepting an offer", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.be.revertedWith(
+        "Offer amount is not equal to the amount of ETH sent"
+      );
+    });
+
+    it("Ensures an offer is still valid before it can be accepted", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Accept off the first time
       await barterMarket.connect(account2).acceptOffer(0);
 
-      expect(await ERC20A.balanceOf(account1.address)).to.equal(900);
-      expect(await ERC20A.balanceOf(account2.address)).to.equal(2100);
-      expect(await ERC20B.balanceOf(account1.address)).to.equal(2050);
-      expect(await ERC20B.balanceOf(account2.address)).to.equal(950);
-
-      expect(await ERC721A.ownerOf(1)).to.equal(account2.address);
-      expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
+      await expect(
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.be.revertedWith("This offer is no longer available");
     });
+
+    it("Ensures that the person accepting the offer has enough coins", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const largeNumber = 500000000;
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(largeNumber)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, largeNumber);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.be.revertedWith("Not enough tokens");
+    });
+
+    it("Ensures that the person accepting the offer approved enough coins", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await expect(
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.be.revertedWith("Not enough allowed tokens");
+    });
+
+    it("Ensures that the person accepting an offer has approved any NFTs", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+
+      await expect(
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.be.revertedWith("Not approved for all NFT transfers");
+    });
+
+    it("Ensures that the person accepting an owns the nfts they're trying to trade", async function () {
+      // Define Offer
+      const offerCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(100)],
+        contractAddresses: [ERC20A.address],
+      };
+
+      const offerNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(1)],
+        contractAddresses: [ERC721A.address],
+      };
+
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: offerCoins,
+        nfts: offerNfts,
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      // Define Ask
+      const askCoins: CoinBundleJSON = {
+        amounts: [BigNumber.from(50)],
+        contractAddresses: [ERC20B.address],
+      };
+
+      const askNfts: NFTBundleJSON = {
+        ids: [BigNumber.from(10)],
+        contractAddresses: [ERC721B.address],
+      };
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: askCoins,
+        nfts: askNfts,
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+
+      await expect(
+        barterMarket.connect(account2).acceptOffer(0)
+      ).to.be.revertedWith("You no longer own this nft");
+    });
+
+    // TO-DO
+    it("Ensures the contract has enough eth to send the target", async function () {});
   });
 });
