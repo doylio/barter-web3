@@ -5,7 +5,7 @@ import "hardhat/console.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-contract BarterWalletFactory {
+contract BarterMarket {
   enum State {
     SENT,
     INPROGRESS,
@@ -56,23 +56,19 @@ contract BarterWalletFactory {
     address payable _target,
     Bundle calldata offerBundle,
     Bundle calldata askBundle
-    ) public payable {
+  ) public payable {
     // Destructure bundles
     uint256 _offerEth = offerBundle.offeredEther;
-    address[] memory _offerCoinAddresses = offerBundle
-        .tokens
-        .contractAddresses;
+    address[] memory _offerCoinAddresses = offerBundle.tokens.contractAddresses;
     uint256[] memory _offerCoinAmounts = offerBundle.tokens.amounts;
-    address[] memory _offerNFTAddresses = offerBundle
-        .nfts
-        .contractAddresses;
+    address[] memory _offerNFTAddresses = offerBundle.nfts.contractAddresses;
     uint256[] memory _offerNFTIds = offerBundle.nfts.ids;
     uint256 _askEth = askBundle.offeredEther;
     address[] memory _askCoinAddresses = askBundle.tokens.contractAddresses;
     uint256[] memory _askCoinAmounts = askBundle.tokens.amounts;
     address[] memory _askNFTAddresses = askBundle.nfts.contractAddresses;
     uint256[] memory _askNFTIds = askBundle.nfts.ids;
-		
+
     require(_target != address(0), "Target address is invalid");
     require(
       _offerEth == msg.value,
@@ -95,38 +91,6 @@ contract BarterWalletFactory {
       "Ask NFT address and ID arrays are not the same length"
     );
 
-    // Check that enough tokens have been approved
-    for (uint256 i = 0; i < _offerCoinAddresses.length; i++) {
-      ERC20 coinContract = ERC20(_offerCoinAddresses[i]);
-			require(
-        coinContract.allowance(msg.sender, address(this)) >=
-          _offerCoinAmounts[i] +
-            committedTokens[msg.sender][_offerCoinAddresses[i]],
-        "Not enough tokens to make the offer"
-      );
-      committedTokens[msg.sender][_offerCoinAddresses[i]] += _offerCoinAmounts[
-        i
-      ];
-    }
-
-    // Check that NFTs have been approved
-    for (uint256 i = 0; i < _offerNFTAddresses.length; i++) {
-      ERC721 nftContract = ERC721(_offerNFTAddresses[i]);
-      require(
-        nftContract.ownerOf(_offerNFTIds[i]) == msg.sender,
-        "Not your NFT"
-      );
-      require(
-        nftContract.isApprovedForAll(msg.sender, address(this)),
-        "Not approved for all NFT transfers"
-      );
-      require(
-        committedNFTs[_offerNFTAddresses[i]][_offerNFTIds[i]] == false,
-        "Already committed to another offer"
-      );
-      committedNFTs[_offerNFTAddresses[i]][_offerNFTIds[i]] = true;
-    }
-
     // Create the offer
     offers[offerCount] = TradeOffer(
       payable(msg.sender),
@@ -148,86 +112,90 @@ contract BarterWalletFactory {
     offerCount += 1;
   }
 
-	function acceptOffer(uint256 _offerId) public payable {
-		TradeOffer memory offer = offers[_offerId];
-		
-		require(
-			offer.target == msg.sender, 
-			"This offer was not sent to you"
-		);
-		require(
-			offer.askBundle.offeredEther == msg.value,
-			"Offer amount is not equal to the amount of ETH sent"
-		);
-		require(
-			offer.state == State.SENT,
-			"This offer is no longer available"
-		);
-		
-		// State should be set before transfer i think https://medium.com/coinmonks/common-attacks-in-solidity-and-how-to-defend-against-them-9bc3994c7c18
-		// If anything fails all state changes will be reverted anyways, kind of like a db transaction
-		offers[_offerId].state = State.ACCEPTED;
+  function acceptOffer(uint256 _offerId) public payable {
+    TradeOffer memory offer = offers[_offerId];
 
-		// Check that the target's assets are approved for the trade, then transfer
-		CoinBundle memory askCoins = offer.askBundle.tokens;			
-		NFTBundle memory askNfts = offer.askBundle.nfts;
+    require(offer.target == msg.sender, "This offer was not sent to you");
+    require(
+      offer.askBundle.offeredEther == msg.value,
+      "Offer amount is not equal to the amount of ETH sent"
+    );
+    require(offer.state == State.SENT, "This offer is no longer available");
 
-		for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
-			ERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
-			
-			require(
-				coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
-				"Not enough tokens"
-			);
-			require(
-				coinContract.allowance(offer.target, address(this)) >=
-					askCoins.amounts[i] +
-						committedTokens[offer.target][askCoins.contractAddresses[i]],
-				"Not enough allowed tokens"
-			);
+    // State should be set before transfer i think https://medium.com/coinmonks/common-attacks-in-solidity-and-how-to-defend-against-them-9bc3994c7c18
+    // If anything fails all state changes will be reverted anyways, kind of like a db transaction
+    offers[_offerId].state = State.ACCEPTED;
 
-			coinContract.transferFrom(offer.target, offer.offerer, askCoins.amounts[i]);
-		}
+    // Check that the target's assets are approved for the trade, then transfer
+    CoinBundle memory askCoins = offer.askBundle.tokens;
+    NFTBundle memory askNfts = offer.askBundle.nfts;
 
-		for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
-			ERC721 nftContract = ERC721(askNfts.contractAddresses[i]);
+    for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
+      ERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
 
-			require(
-				nftContract.ownerOf(askNfts.ids[i]) == msg.sender,
-				"You no longer own this nft"
-			);
-			require(
-				nftContract.isApprovedForAll(msg.sender, address(this)),
-				"Not approved for all NFT transfers"
-			);
-			require(
-				committedNFTs[askNfts.contractAddresses[i]][askNfts.ids[i]] == false,
-				"Already committed to another offer"
-			);
+      require(
+        coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
+        "Not enough tokens"
+      );
+      require(
+        coinContract.allowance(offer.target, address(this)) >=
+          askCoins.amounts[i] +
+            committedTokens[offer.target][askCoins.contractAddresses[i]],
+        "Not enough allowed tokens"
+      );
 
-			nftContract.safeTransferFrom(offer.target, offer.offerer, askNfts.ids[i]);
-		}
+      coinContract.transferFrom(
+        offer.target,
+        offer.offerer,
+        askCoins.amounts[i]
+      );
+    }
 
-		// Double check offerer's assets are approved as approvals can be revoked, then transfer
-		CoinBundle memory offerCoins = offer.offerBundle.tokens;
-		NFTBundle memory offerNfts = offer.offerBundle.nfts;
+    for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
+      ERC721 nftContract = ERC721(askNfts.contractAddresses[i]);
 
-		for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
-			ERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+      require(
+        nftContract.ownerOf(askNfts.ids[i]) == msg.sender,
+        "You no longer own this nft"
+      );
+      require(
+        nftContract.isApprovedForAll(msg.sender, address(this)),
+        "Not approved for all NFT transfers"
+      );
+      require(
+        committedNFTs[askNfts.contractAddresses[i]][askNfts.ids[i]] == false,
+        "Already committed to another offer"
+      );
 
-			require(
-				coinContract.balanceOf(offer.offerer) >= offerCoins.amounts[i],
-				"Not enough tokens"
-			);
-			require(
-				coinContract.allowance(offer.offerer, address(this)) >=
-					offerCoins.amounts[i],
-				"not enough allowed tokens"
-			);
+      nftContract.safeTransferFrom(offer.target, offer.offerer, askNfts.ids[i]);
+    }
 
-			committedTokens[offer.offerer][offerCoins.contractAddresses[i]] -= offerCoins.amounts[i];
-			coinContract.transferFrom(offer.offerer, offer.target, offerCoins.amounts[i]);
-		}
+    // Double check offerer's assets are approved as approvals can be revoked, then transfer
+    CoinBundle memory offerCoins = offer.offerBundle.tokens;
+    NFTBundle memory offerNfts = offer.offerBundle.nfts;
+
+    for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
+      ERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+
+      require(
+        coinContract.balanceOf(offer.offerer) >= offerCoins.amounts[i],
+        "Not enough tokens"
+      );
+      require(
+        coinContract.allowance(offer.offerer, address(this)) >=
+          offerCoins.amounts[i],
+        "not enough allowed tokens"
+      );
+
+      committedTokens[offer.offerer][
+        offerCoins.contractAddresses[i]
+      ] -= offerCoins.amounts[i];
+      coinContract.transferFrom(
+        offer.offerer,
+        offer.target,
+        offerCoins.amounts[i]
+      );
+    }
 
     for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
       ERC721 nftContract = ERC721(offerNfts.contractAddresses[i]);
@@ -241,20 +209,20 @@ contract BarterWalletFactory {
         "Not approved for all NFT transfers"
       );
 
-			committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
-			nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
+      committedNFTs[offerNfts.contractAddresses[i]][offerNfts.ids[i]] = false;
+      nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
     }
 
-		require(
-       offer.offerBundle.offeredEther <= address(this).balance,
+    require(
+      offer.offerBundle.offeredEther <= address(this).balance,
       "Not enough eth in contract!"
     );
 
-		payable(offer.offerer).transfer(msg.value);
-		payable(offer.target).transfer(offer.offerBundle.offeredEther);
+    payable(offer.offerer).transfer(msg.value);
+    payable(offer.target).transfer(offer.offerBundle.offeredEther);
 
-		emit TradeOfferAccepted(_offerId, offer.offerer, offer.target);
-	}
+    emit TradeOfferAccepted(_offerId, offer.offerer, offer.target);
+  }
 
   function recallOffer(uint256 _offerId) public {
     require(offers[_offerId].offerer == msg.sender, "Offer not created by you");
@@ -286,4 +254,6 @@ contract BarterWalletFactory {
   // TODO: add a view function to get all offers made to you
 
   // TODO: add a view function to get all offers made by you
+
+  // TODO: add a view function to check that an offer is valid
 }
