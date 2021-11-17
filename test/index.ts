@@ -559,7 +559,7 @@ describe("BarterMarket", function () {
   });
 
   describe("acceptOffer", () => {
-    it.only("can accept a basic offer", async function () {
+    it("can accept a basic offer", async function () {
       // Define Offer
       const offerCoins: CoinBundleJSON = {
         amounts: [BigNumber.from(100)],
@@ -1340,96 +1340,6 @@ describe("BarterMarket", function () {
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
       ).to.be.revertedWith("You no longer own this nft");
-    });
-
-    it("Ensures that the person accepting has not made offers with the NFTs in this trade", async function () {
-      // Define Offer
-      const offerCoins: CoinBundleJSON = {
-        amounts: [BigNumber.from(100)],
-        contractAddresses: [ERC20A.address],
-      };
-
-      const offerNfts: NFTBundleJSON = {
-        ids: [BigNumber.from(1)],
-        contractAddresses: [ERC721A.address],
-      };
-
-      const offerBundle: BundleJSON = {
-        offeredEther: ethers.utils.parseEther("1.0"),
-        tokens: offerCoins,
-        nfts: offerNfts,
-      };
-
-      // Account 1 allows contract to trade coins and nfts
-      await ERC20A.connect(account1).approve(barterMarket.address, 100);
-      await ERC721A.connect(account1).setApprovalForAll(
-        barterMarket.address,
-        true
-      );
-
-      // Define Ask
-      const askCoins: CoinBundleJSON = {
-        amounts: [BigNumber.from(50)],
-        contractAddresses: [ERC20B.address],
-      };
-
-      const askNfts: NFTBundleJSON = {
-        ids: [BigNumber.from(1)],
-        contractAddresses: [ERC721B.address],
-      };
-
-      const askBundle: BundleJSON = {
-        offeredEther: ethers.utils.parseEther("0"),
-        tokens: askCoins,
-        nfts: askNfts,
-      };
-
-      await barterMarket
-        .connect(account1)
-        .createOffer(account2.address, offerBundle, askBundle, {
-          value: offerBundle.offeredEther,
-        });
-
-      // Account 2 allows contract to trade coins and nfts
-      await ERC20B.connect(account2).approve(barterMarket.address, 50);
-      await ERC721B.connect(account2).setApprovalForAll(
-        barterMarket.address,
-        true
-      );
-
-      // Define Offer
-      const offer2Bundle: BundleJSON = {
-        offeredEther: ethers.utils.parseEther("0"),
-        tokens: {
-          amounts: [],
-          contractAddresses: [],
-        },
-        nfts: {
-          ids: [BigNumber.from(1)],
-          contractAddresses: [ERC721B.address],
-        },
-      };
-
-      // Define Ask
-      const ask2Bundle: BundleJSON = {
-        offeredEther: ethers.utils.parseEther("0"),
-        tokens: {
-          amounts: [],
-          contractAddresses: [],
-        },
-        nfts: {
-          ids: [],
-          contractAddresses: [],
-        },
-      };
-
-      await barterMarket
-        .connect(account2)
-        .createOffer(account3.address, offer2Bundle, ask2Bundle);
-
-      await expect(
-        barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Already committed to another offer");
     });
 
     // TO-DO
