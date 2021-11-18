@@ -2,10 +2,14 @@
 pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract BarterMarket {
+	using SafeERC20 for IERC20;
+
   enum State {
     SENT,
     INPROGRESS,
@@ -131,7 +135,7 @@ contract BarterMarket {
     NFTBundle memory askNfts = offer.askBundle.nfts;
 
     for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
-      ERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
+      IERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
 
       require(
         coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
@@ -143,7 +147,7 @@ contract BarterMarket {
         "Not enough allowed tokens"
       );
 
-      coinContract.transferFrom(
+      coinContract.safeTransferFrom(
         offer.target,
         offer.offerer,
         askCoins.amounts[i]
@@ -170,7 +174,7 @@ contract BarterMarket {
     NFTBundle memory offerNfts = offer.offerBundle.nfts;
 
     for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
-      ERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+      IERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
 
       require(
         coinContract.balanceOf(offer.offerer) >= offerCoins.amounts[i],
@@ -182,7 +186,7 @@ contract BarterMarket {
         "not enough allowed tokens"
       );
 
-      coinContract.transferFrom(
+      coinContract.safeTransferFrom(
         offer.offerer,
         offer.target,
         offerCoins.amounts[i]
