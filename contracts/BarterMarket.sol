@@ -6,9 +6,12 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+
 
 contract BarterMarket {
 	using SafeERC20 for IERC20;
+	using SafeMath for uint256;
 
   enum State {
     SENT,
@@ -109,7 +112,7 @@ contract BarterMarket {
     );
 
     emit TradeOfferCreated(offerCount, msg.sender, _target);
-    offerCount += 1;
+    offerCount = offerCount.add(1);
   }
 
   function acceptOffer(uint256 _offerId) public payable {
@@ -136,6 +139,7 @@ contract BarterMarket {
 
     for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
       IERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
+			uint256 amount = askCoins.amounts[i];
 
       require(
         coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
@@ -143,15 +147,18 @@ contract BarterMarket {
       );
       require(
         coinContract.allowance(offer.target, address(this)) >=
-          askCoins.amounts[i],
+          amount,
         "Not enough allowed tokens"
       );
 
+			uint256 beforeBalance = coinContract.balanceOf(offer.offerer);
       coinContract.safeTransferFrom(
         offer.target,
         offer.offerer,
-        askCoins.amounts[i]
+        amount
       );
+			uint256 afterBalance = coinContract.balanceOf(offer.offerer);
+      require(beforeBalance.add(amount) == afterBalance, "Token transfer call did not transfer expected amount");
     }
 
     for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
@@ -175,6 +182,7 @@ contract BarterMarket {
 
     for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
       IERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+      uint256 amount = offerCoins.amounts[i];
 
       require(
         coinContract.balanceOf(offer.offerer) >= offerCoins.amounts[i],
@@ -182,15 +190,18 @@ contract BarterMarket {
       );
       require(
         coinContract.allowance(offer.offerer, address(this)) >=
-          offerCoins.amounts[i],
+          amount,
         "not enough allowed tokens"
       );
 
+			uint256 beforeBalance = coinContract.balanceOf(offer.target);
       coinContract.safeTransferFrom(
         offer.offerer,
         offer.target,
-        offerCoins.amounts[i]
+        amount
       );
+			uint256 afterBalance = coinContract.balanceOf(offer.target);
+      require(beforeBalance.add(amount) == afterBalance, "Token transfer call did not transfer expected amount");
     }
 
     for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
