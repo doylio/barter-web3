@@ -13,7 +13,7 @@ export default function Home() {
       <Nav />
       <Flex p="10" flex="1" alignItems="center" flexDirection="column">
         <Flex
-          width="50%"
+          width={["90%", null, null, null, "50%"]}
           height="100%"
           flexDirection="column"
           alignItems="center"
@@ -30,10 +30,14 @@ export default function Home() {
             border-radius: 4px;
           `}
         >
-          <Heading fontSize="52" textAlign="center">
+          <Heading fontSize={["36", "48", null, null, "52"]} textAlign="center">
             Barter game assets <br /> in the metaverse
           </Heading>
-          <Text mt="51" fontSize="24" textAlign="center">
+          <Text
+            mt="51"
+            fontSize={["18", "18", null, null, "24"]}
+            textAlign="center"
+          >
             Type ethereum adress or ENS to <br /> check out what NFT user holds
           </Text>
           <Input
