@@ -1,9 +1,10 @@
 import { css } from "@emotion/react";
 import { Button as ChakraButton } from "@chakra-ui/react";
 
-const Button = ({ children, onClick }) => {
+const Button = ({ children, onClick, width }) => {
   return (
     <ChakraButton
+      width={width}
       css={css`
         display: flex;
         flex-direction: row;
