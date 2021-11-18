@@ -55,7 +55,6 @@ In a new terminal window, load the front-end with `npm run dev`. If you want to 
 
 To modify the front page of your application, edit `pages/index.js`.
 
-All [TailwindCSS classes](https://tailwindcss.com/docs) are available to you.
 
 To lint your front-end code, use `npm run lint`.
 
