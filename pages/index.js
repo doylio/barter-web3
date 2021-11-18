@@ -43,6 +43,8 @@ export default function Home() {
             css={css`
               background: #ffffff;
               border-radius: 2px;
+              color: rgba(60, 121, 213);
+              font-weight: 700;
 
               ::placeholder {
                 color: rgba(60, 121, 213);
