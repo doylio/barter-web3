@@ -3,7 +3,7 @@ import { default as NextHead } from "next/Head";
 const Head = ({ title, description }) => {
   return (
     <NextHead>
-      <title>{title}3</title>
+      <title>{title}</title>
       <meta name="description" content={description} />
       <link rel="icon" href="/favicon.ico" />
     </NextHead>
