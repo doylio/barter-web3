@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "npx hardhat test",
-    "client-dev": "next dev",
-    "client-build": "next build",
-    "client-start": "next start",
-    "client-lint": "next lint"
+    "test-contracts": "npx hardhat test",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
   "repository": {
     "type": "git",
