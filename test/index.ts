@@ -852,7 +852,7 @@ describe("BarterMarket", function () {
       );
     });
 
-    it("should reverts if function caller is not offer recipient", async function () {
+    it("should revert if function caller is not offer recipient", async function () {
       const offerBundle: BundleJSON = {
         offeredEther: ethers.utils.parseEther("1.0"),
         tokens: {
@@ -1056,7 +1056,7 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Not enough tokens");
+      ).to.be.revertedWith("Acceptor does not have enough tokens");
     });
 
     it("should revert if the acceptor has not allowed enough of a token", async function () {
@@ -1106,7 +1106,7 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Not enough allowed tokens");
+      ).to.be.revertedWith("Acceptor has not allowed enough tokens");
     });
 
     it("should revert if the acceptor has not approved all NFTs", async function () {
@@ -1152,7 +1152,9 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Not approved for all NFT transfers");
+      ).to.be.revertedWith(
+        "Acceptor has not approved all collections in trade"
+      );
     });
 
     it("should revert if the acceptor no longer owns the desired NFT", async function () {
@@ -1198,10 +1200,10 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("You no longer own this nft");
+      ).to.be.revertedWith("Acceptor no longer owns this NFT");
     });
 
-    it("Should revert if the offerer does not have enough of a token", async function () {
+    it("should revert if the offerer does not have enough of a token", async function () {
       const tooMany = 600000;
 
       const offerBundle: BundleJSON = {
@@ -1250,7 +1252,7 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Not enough tokens");
+      ).to.be.revertedWith("Offerer does not have enough tokens");
     });
 
     it("should revert if the offerer has not allowed enough of a token", async function () {
@@ -1300,7 +1302,7 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("not enough allowed tokens");
+      ).to.be.revertedWith("Offerer has not allowed enough tokens");
     });
 
     it("should revert if the acceptor has not approved all NFTs", async function () {
@@ -1346,7 +1348,7 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Not approved for all NFT transfers");
+      ).to.be.revertedWith("Offerer has not approved all collections in trade");
     });
 
     it("should revert if the offerer no longer owned the offered NFT", async function () {
@@ -1396,10 +1398,8 @@ describe("BarterMarket", function () {
 
       await expect(
         barterMarket.connect(account2).acceptOffer(0)
-      ).to.be.revertedWith("Not the offerers NFT anymore");
+      ).to.be.revertedWith("Offerer no longer owns an NFT in the trade");
     });
-
-    // TO-DO
 
     it(
       "should revert if the contract does not have enough eth to send to the acceptor"

@@ -8,7 +8,6 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-
 contract BarterMarket {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
@@ -126,7 +125,7 @@ contract BarterMarket {
     require(offer.state == State.SENT, "This offer is no longer available");
 		require(
       offer.offerBundle.offeredEther <= address(this).balance,
-      "Not enough eth in contract!"
+      "Not enough eth in contract"
     );
 
     // State should be set before transfer i think https://medium.com/coinmonks/common-attacks-in-solidity-and-how-to-defend-against-them-9bc3994c7c18
@@ -143,12 +142,12 @@ contract BarterMarket {
 
       require(
         coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
-        "Not enough tokens"
+        "Acceptor does not have enough tokens"
       );
       require(
         coinContract.allowance(offer.target, address(this)) >=
           amount,
-        "Not enough allowed tokens"
+        "Acceptor has not allowed enough tokens"
       );
 
 			uint256 beforeBalance = coinContract.balanceOf(offer.offerer);
@@ -166,11 +165,11 @@ contract BarterMarket {
 
       require(
         nftContract.ownerOf(askNfts.ids[i]) == msg.sender,
-        "You no longer own this nft"
+        "Acceptor no longer owns this NFT"
       );
       require(
         nftContract.isApprovedForAll(msg.sender, address(this)),
-        "Not approved for all NFT transfers"
+        "Acceptor has not approved all collections in trade"
       );
 
       nftContract.safeTransferFrom(offer.target, offer.offerer, askNfts.ids[i]);
@@ -186,12 +185,12 @@ contract BarterMarket {
 
       require(
         coinContract.balanceOf(offer.offerer) >= offerCoins.amounts[i],
-        "Not enough tokens"
+        "Offerer does not have enough tokens"
       );
       require(
         coinContract.allowance(offer.offerer, address(this)) >=
           amount,
-        "not enough allowed tokens"
+        "Offerer has not allowed enough tokens"
       );
 
 			uint256 beforeBalance = coinContract.balanceOf(offer.target);
@@ -209,11 +208,11 @@ contract BarterMarket {
 
       require(
         nftContract.ownerOf(offerNfts.ids[i]) == offer.offerer,
-        "Not the offerers NFT anymore"
+        "Offerer no longer owns an NFT in the trade"
       );
       require(
         nftContract.isApprovedForAll(offer.offerer, address(this)),
-        "Not approved for all NFT transfers"
+        "Offerer has not approved all collections in trade"
       );
 
       nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
