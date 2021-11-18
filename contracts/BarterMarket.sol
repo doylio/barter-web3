@@ -117,6 +117,10 @@ contract BarterMarket {
       "Offer amount is not equal to the amount of ETH sent"
     );
     require(offer.state == State.SENT, "This offer is no longer available");
+		require(
+      offer.offerBundle.offeredEther <= address(this).balance,
+      "Not enough eth in contract!"
+    );
 
     // State should be set before transfer i think https://medium.com/coinmonks/common-attacks-in-solidity-and-how-to-defend-against-them-9bc3994c7c18
     // If anything fails all state changes will be reverted anyways, kind of like a db transaction
@@ -199,11 +203,6 @@ contract BarterMarket {
 
       nftContract.transferFrom(offer.offerer, offer.target, offerNfts.ids[i]);
     }
-
-    require(
-      offer.offerBundle.offeredEther <= address(this).balance,
-      "Not enough eth in contract!"
-    );
 
     payable(offer.offerer).transfer(msg.value);
     payable(offer.target).transfer(offer.offerBundle.offeredEther);
