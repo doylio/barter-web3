@@ -2,12 +2,11 @@ import { ethers } from "hardhat";
 
 async function main() {
   // We get the contract to deploy
-  const Greeter = await ethers.getContractFactory("Greeter");
-  const greeter = await Greeter.deploy("Hello, Hardhat!");
+  const barterMarketFactory = await ethers.getContractFactory("BarterMarket");
+  const barterMarket = await barterMarketFactory.deploy();
+  await barterMarket.deployed();
 
-  await greeter.deployed();
-
-  console.log("Greeter deployed to:", greeter.address);
+  console.log("barter deployed to:", barterMarket.address);
 }
 
 main().catch((error) => {
