@@ -20,7 +20,7 @@ const Nav = () => {
       const signer = provider.getSigner();
       try {
         const signerAddress = await signer.getAddress();
-        setConnectedWalletAddressState(`Connected wallet: ${signerAddress}`);
+        setConnectedWalletAddressState(`${signerAddress}`);
       } catch {
         setConnectedWalletAddressState(null);
         return;
@@ -40,12 +40,16 @@ const Nav = () => {
           BarterWeb3
         </Text>
       </Link>
-      <Box>
-        <Button onClick={requestAccount}>Connect Wallet</Button>
-        <div>
-          <div>{connectedWalletAddress && <p>{connectedWalletAddress}</p>}</div>
-        </div>
-      </Box>
+      <Flex alignItems="center" flexDirection="row">
+        {connectedWalletAddress ? (
+          <Text fontWeight="700" mr="5">
+            {connectedWalletAddress.slice(0, 6)}...
+            {connectedWalletAddress.slice(-4)}
+          </Text>
+        ) : (
+          <Button onClick={requestAccount}>Connect Wallet</Button>
+        )}
+      </Flex>
     </Flex>
   );
 };
