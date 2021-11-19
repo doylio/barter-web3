@@ -617,6 +617,92 @@ describe("BarterMarket", function () {
       expect(await ERC721B.ownerOf(1)).to.equal(account1.address);
     });
 
+    it("can accept a complicated offer", async function () {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100), BigNumber.from(50)],
+          contractAddresses: [ERC20A.address, ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1), BigNumber.from(2), BigNumber.from(12)],
+          contractAddresses: [
+            ERC721A.address,
+            ERC721A.address,
+            ERC721B.address,
+          ],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC20B.connect(account1).approve(barterMarket.address, 50);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+      await ERC721B.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("2.0"),
+        tokens: {
+          amounts: [BigNumber.from(50), BigNumber.from(100)],
+          contractAddresses: [ERC20A.address, ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(3), BigNumber.from(13), BigNumber.from(15)],
+          contractAddresses: [
+            ERC721B.address,
+            ERC721A.address,
+            ERC721A.address,
+          ],
+        },
+      };
+
+      // Account 2 allows contract to trade coins and nfts
+      await ERC20B.connect(account2).approve(barterMarket.address, 100);
+      await ERC20A.connect(account2).approve(barterMarket.address, 50);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+      await ERC721A.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: ethers.utils.parseEther("1.0"),
+        });
+
+      await expect(() =>
+        barterMarket
+          .connect(account2)
+          .acceptOffer(0, { value: askBundle.offeredEther })
+      ).to.changeEtherBalances(
+        [account1, account2],
+        [askBundle.offeredEther, offerBundle.offeredEther.mul(-1)]
+      );
+
+      expect(await ERC20A.balanceOf(account1.address)).to.equal(950);
+      expect(await ERC20A.balanceOf(account2.address)).to.equal(2050);
+      expect(await ERC20B.balanceOf(account1.address)).to.equal(2050);
+      expect(await ERC20B.balanceOf(account2.address)).to.equal(950);
+
+      expect(await ERC721A.ownerOf(1)).to.equal(account2.address);
+      expect(await ERC721A.ownerOf(2)).to.equal(account2.address);
+      expect(await ERC721A.ownerOf(12)).to.equal(account2.address);
+
+      expect(await ERC721B.ownerOf(3)).to.equal(account1.address);
+      expect(await ERC721A.ownerOf(13)).to.equal(account1.address);
+      expect(await ERC721A.ownerOf(15)).to.equal(account1.address);
+    });
+
     it("can accept an offer and trade only coins", async function () {
       const offerBundle: BundleJSON = {
         offeredEther: ethers.utils.parseEther("0"),
