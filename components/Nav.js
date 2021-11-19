@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Flex, Text, Box } from "@chakra-ui/react";
 import { ethers } from "ethers";
 import Link from "next/link";
+import { useMoralis } from "react-moralis";
 
 import { hasEthereum } from "../utils/ethereum";
 import Button from "./Button";
 
 const Nav = () => {
   const [connectedWalletAddress, setConnectedWalletAddressState] = useState("");
+  const { authenticate, isAuthenticated, user } = useMoralis();
 
   // If wallet is already connected...
   useEffect(() => {
@@ -27,12 +29,8 @@ const Nav = () => {
       }
     }
     setConnectedWalletAddress();
-  }, []);
+  }, [isAuthenticated]);
 
-  // Request access to MetaMask account
-  async function requestAccount() {
-    await window.ethereum.request({ method: "eth_requestAccounts" });
-  }
   return (
     <Flex p="5" width="100%" justifyContent="space-between">
       <Link href="/">
@@ -41,13 +39,13 @@ const Nav = () => {
         </Text>
       </Link>
       <Flex alignItems="center" flexDirection="row">
-        {connectedWalletAddress ? (
+        {isAuthenticated && connectedWalletAddress ? (
           <Text fontWeight="700" mr="5">
             {connectedWalletAddress.slice(0, 6)}...
             {connectedWalletAddress.slice(-4)}
           </Text>
         ) : (
-          <Button onClick={requestAccount}>Connect Wallet</Button>
+          <Button onClick={authenticate}>Connect Wallet</Button>
         )}
       </Flex>
     </Flex>
