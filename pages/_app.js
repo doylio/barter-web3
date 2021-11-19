@@ -4,8 +4,6 @@ import { MoralisProvider } from "react-moralis";
 import theme from "../styles/theme";
 import "../styles/globals.css";
 
-console.log(process.env.NEXT_PUBLIC_REACT_APP_MORALIS_APPLICATION_ID);
-
 function MyApp({ Component, pageProps }) {
   return (
     <MoralisProvider
