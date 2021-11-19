@@ -5,4 +5,11 @@ function hasEthereum() {
   );
 }
 
-export { hasEthereum };
+function trimAddress(address) {
+  if (address.includes(".eth")) {
+    return address;
+  }
+  return address.slice(0, 6) + "..." + address.slice(-4);
+}
+
+export { hasEthereum, trimAddress };

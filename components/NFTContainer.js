@@ -2,7 +2,17 @@ import React from "react";
 import { Flex, Text, Box } from "@chakra-ui/react";
 import { css } from "@emotion/react";
 
-const NFTContainer = ({ metadata, name }) => {
+export const nftContainerSizes = {
+  sm: {
+    height: "15em",
+    width: "11em",
+  },
+  md: {
+    height: "20em",
+    width: "15em",
+  },
+};
+const NFTContainer = ({ metadata, name, size = nftContainerSizes.md }) => {
   try {
     const parsedMetadata = JSON.parse(metadata);
 
@@ -22,8 +32,8 @@ const NFTContainer = ({ metadata, name }) => {
       <Flex
         alignItems="center"
         flexDirection="column"
-        height="20em"
-        width="15em"
+        height={size.height}
+        width={size.width}
         borderRadius="4"
         css={css`
           background: #1e0938;
