@@ -48,6 +48,14 @@ export default function Home() {
   }
 
   useEffect(() => {
+    if (!ethAddress) {
+      setTokens(null);
+      setNFTs(null);
+    }
+
+    if (!ethAddress.includes(".eth") && ethAddress.length !== 42) {
+      return;
+    }
     async function getNFTs() {
       try {
         const address = await resolveDomain();
