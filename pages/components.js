@@ -12,7 +12,11 @@ import {
 import Nav from "../components/Nav";
 import Layout from "../components/Layout";
 import Head from "../components/Head";
-import { useMoralisWeb3Api } from "react-moralis";
+import {
+  useMoralis,
+  useMoralisWeb3Api,
+  useMoralisWeb3ApiCall,
+} from "react-moralis";
 
 export default function Home() {
   const [ethAddress, setEthAddress] = useState("");
@@ -21,28 +25,54 @@ export default function Home() {
 
   const Web3Api = useMoralisWeb3Api();
   const toast = useToast();
+  const { web3, enableWeb3, isWeb3Enabled } = useMoralis();
+
+  useEffect(() => {
+    if (!isWeb3Enabled) {
+      enableWeb3();
+    }
+  }, [isWeb3Enabled, enableWeb3]);
+
+  async function resolveDomain() {
+    if (!isWeb3Enabled) {
+      return;
+    }
+    try {
+      if (ethAddress.includes(".eth")) {
+        return await web3.eth.ens.getAddress(ethAddress);
+      }
+      return ethAddress;
+    } catch (err) {
+      console.log("Error", err);
+
+      return ethAddress;
+    }
+  }
 
   useEffect(() => {
     async function getNFTs() {
       try {
+        const address = await resolveDomain();
         const userEthNFTs = await Web3Api.account.getNFTs({
-          address: ethAddress,
+          address,
+          chain: process.env.NEXT_PUBLIC_CHAIN,
         });
+
         setNFTs(userEthNFTs.result);
       } catch (err) {
-        console.log(err);
         setNFTs(null);
       }
     }
 
     async function getTokens() {
       try {
+        const address = await resolveDomain();
         const userTokens = await Web3Api.account.getTokenBalances({
-          address: ethAddress,
+          address,
+          chain: process.env.NEXT_PUBLIC_CHAIN,
         });
         setTokens(userTokens);
       } catch (err) {
-        console.log(err);
         setTokens(null);
       }
     }
@@ -60,7 +90,9 @@ export default function Home() {
 
         <Input
           value={ethAddress}
-          onChange={(e) => setEthAddress(e.target.value)}
+          onChange={async (e) => {
+            setEthAddress(e.target.value);
+          }}
           height="60px"
           mt="50"
           mb="30"
@@ -86,7 +118,10 @@ export default function Home() {
             alignItems="flex-start"
           >
             <Heading mb="10">ERC20</Heading>
-            <Grid templateColumns={["repeat(4, 1fr)"]} gap={6}>
+            <Grid
+              templateColumns={["repeat(2, 1fr)", null, "repeat(4, 1fr)"]}
+              gap={6}
+            >
               {tokens.map((token) => (
                 <TokenContainer token={token} />
               ))}
@@ -106,7 +141,7 @@ export default function Home() {
               gap={6}
             >
               {nfts.map((nft) => (
-                <NFTContainer metadata={nft.metadata} />
+                <NFTContainer metadata={nft.metadata} name={nft.name} />
               ))}
             </Grid>
           </Flex>
@@ -139,7 +174,9 @@ const TokenContainer = ({ token }) => {
         backdrop-filter: blur(134.882px);
       `}
     >
-      {token.logo && <img style={{ width: "2em" }} src={token.logo} />}
+      {token.logo && (
+        <img style={{ width: "2em", marginRight: "1em" }} src={token.logo} />
+      )}
       <Text fontWeight="700">
         {amount} {token.symbol}
       </Text>
@@ -147,11 +184,19 @@ const TokenContainer = ({ token }) => {
   );
 };
 
-const NFTContainer = ({ metadata }) => {
+const NFTContainer = ({ metadata, name }) => {
   const parsedMetadata = JSON.parse(metadata);
 
   if (!parsedMetadata) {
     return null;
+  }
+
+  let imageURL = parsedMetadata.image;
+
+  if (parsedMetadata.image.includes("ipfs://")) {
+    const IPFS_BASE_URL = "https://ipfs.io/ipfs/";
+    const normalizedURL = parsedMetadata.image.replace("ipfs/", "");
+    imageURL = IPFS_BASE_URL + normalizedURL.split("ipfs://")[1];
   }
 
   return (
@@ -173,11 +218,13 @@ const NFTContainer = ({ metadata }) => {
         backgroundPosition="center"
         backgroundRepeat="no-repeat"
         backgroundSize="cover"
-        backgroundImage={parsedMetadata.image}
+        backgroundImage={imageURL}
       />
       <Flex mt="5" width="80%">
         <Flex justifyContent="center" width="100%" height="100%" p="2">
-          <Text fontWeight="700">{parsedMetadata.name}</Text>
+          <Text textAlign="center" fontWeight="700">
+            {parsedMetadata.name ? parsedMetadata.name : name}
+          </Text>
         </Flex>
       </Flex>
     </Flex>
