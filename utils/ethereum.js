@@ -6,6 +6,9 @@ function hasEthereum() {
 }
 
 function trimAddress(address) {
+  if (!address) {
+    return;
+  }
   if (address.includes(".eth")) {
     return address;
   }

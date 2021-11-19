@@ -25,9 +25,9 @@ const TokenContainer = ({ token }) => {
         );
 
   return (
-    <Flex maxWidth="15em" flexDirection="column">
+    <Flex maxWidth="20em" flexDirection="column">
       <Text mb="3" alignSelf="flex-end">
-        {(amount * value) / 100} {token.currency}
+        {((value * parseFloat(amount)) / 100).toFixed(2)} {token.symbol}
       </Text>
       <Slider
         colorScheme="pink"

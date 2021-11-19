@@ -1,12 +1,16 @@
-import React from "react";
+import React, { useState } from "react";
 import { css } from "@emotion/react";
 import { Flex, Heading, Text, Input } from "@chakra-ui/react";
 import Nav from "../components/Nav";
 import Layout from "../components/Layout";
 import Head from "../components/Head";
 import Button from "../components/Button";
+import { useRouter } from "next/router";
 
 export default function Home() {
+  const [address, setAddress] = useState("");
+  const router = useRouter();
+
   return (
     <Layout>
       <Head title="Barter Web3" />
@@ -41,6 +45,8 @@ export default function Home() {
             Type ethereum adress or ENS to <br /> check out what NFT user holds
           </Text>
           <Input
+            val={address}
+            onChange={(e) => setAddress(e.target.value)}
             height="60px"
             mt="50"
             mb="30"
@@ -58,7 +64,9 @@ export default function Home() {
             width="40%"
             placeholder="Address / ENS"
           />
-          <Button width="40%">Search</Button>
+          <Button width="40%" onClick={() => router.push(`/offer/${address}`)}>
+            Search
+          </Button>
         </Flex>
       </Flex>
       <footer></footer>

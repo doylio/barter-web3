@@ -19,6 +19,10 @@ export default function MakeOffer() {
   const [myNFTs, setMyNFTs] = useState(null);
   const [myTokens, setMyTokens] = useState(null);
 
+  // Offer
+  const [offerNFTs, setOfferNFTs] = useState(null);
+  const [offerTokens, setOfferTokens] = useState(null);
+
   // CounterParty
   const [cpNfts, setCPNFTs] = useState(null);
   const [cpTokens, setCPTokens] = useState(null);
@@ -40,7 +44,7 @@ export default function MakeOffer() {
     try {
       if (address.includes(".eth")) {
         const res = await web3.eth.ens.getAddress(address);
-        console.log(res);
+        return res.address;
       }
       return address;
     } catch (err) {
@@ -54,6 +58,10 @@ export default function MakeOffer() {
   }
 
   useEffect(() => {
+    if (!isWeb3Enabled) {
+      return;
+    }
+
     if (!user) {
       setMyTokens(null);
       setMyNFTs(null);
@@ -77,11 +85,11 @@ export default function MakeOffer() {
         const counterPartyAddress = await resolveDomain();
 
         const counterPartyNFTs = await Web3Api.account.getNFTs({
-          counterPartyAddress,
+          address: counterPartyAddress,
           chain: process.env.NEXT_PUBLIC_CHAIN,
         });
         const myNFTs = await Web3Api.account.getNFTs({
-          myAddress,
+          address: myAddress,
           chain: process.env.NEXT_PUBLIC_CHAIN,
         });
 
@@ -97,11 +105,11 @@ export default function MakeOffer() {
       try {
         const counterPartyAddress = await resolveDomain();
         const counterPartyTokens = await Web3Api.account.getTokenBalances({
-          counterPartyAddress,
+          address: counterPartyAddress,
           chain: process.env.NEXT_PUBLIC_CHAIN,
         });
         const myTokens = await Web3Api.account.getTokenBalances({
-          myAddress,
+          address: myAddress,
           chain: process.env.NEXT_PUBLIC_CHAIN,
         });
         setCPTokens(counterPartyTokens);
@@ -113,7 +121,7 @@ export default function MakeOffer() {
 
     getNFTs();
     getTokens();
-  }, [address, user]);
+  }, [address, user, isWeb3Enabled]);
 
   return (
     <Layout>
@@ -132,17 +140,11 @@ export default function MakeOffer() {
           <Flex flexDirection="column">
             <TokensGrid tokens={myTokens} />
             <NFTsGrid nfts={myNFTs} />
-            <Flex flexDirection="column"></Flex>
           </Flex>
         </Flex>
 
         {/* Offer CTA  */}
-        <Flex
-          alignItems="center"
-          justify="center"
-          flex="1.5"
-          flexDirection="column"
-        >
+        <Flex justifyContent="flex-start" flex="1.5" flexDirection="column">
           <Flex flexDirection="column" maxWidth="70%" alignItems="center">
             <Text fontWeight="700" textAlign="center">
               You're offering 40 DAI and 1 NFT from Axie Infinity
@@ -162,7 +164,6 @@ export default function MakeOffer() {
           <Flex flexDirection="column">
             <TokensGrid isOwner={false} tokens={cpTokens} />
             <NFTsGrid isOwner={false} nfts={cpNfts} />
-            <Flex flexDirection="column"></Flex>
           </Flex>
         </Flex>
       </Flex>
@@ -174,7 +175,7 @@ const TokensGrid = ({ tokens, isOwner = true }) => {
   if (tokens && tokens.length !== 0) {
     return (
       <Flex mt="10" flexDirection="column">
-        <Text fontSize="xl" fontWeight="600">
+        <Text mb="5" fontSize="xl" fontWeight="600">
           {isOwner ? "Your ERC-20 offer" : "Counterparty ERC-20"}
         </Text>
 
@@ -193,18 +194,13 @@ const NFTsGrid = ({ nfts, isOwner = true }) => {
   if (nfts && nfts.length !== 0) {
     return (
       <Flex mt="10" flexDirection="column">
-        <Text fontSize="xl" fontWeight="600" mb="10">
+        <Text mb="5" fontSize="xl" fontWeight="600" mb="10">
           {isOwner ? "Your NFTs offer" : "Counterparty NFTs"}
         </Text>
 
-        <Grid templateColumns={["repeat(2, 1fr)"]} gap={2}>
+        <Grid templateColumns={["repeat(2, 1fr)"]} columnGap={2} rowGap={5}>
           {nfts.map((nft, idx) => (
-            <NFTContainer
-              size={nftContainerSizes.sm}
-              key={idx}
-              metadata={nft.metadata}
-              name={nft.name}
-            />
+            <NFTContainer size={nftContainerSizes.sm} key={idx} nft={nft} />
           ))}
         </Grid>
       </Flex>
