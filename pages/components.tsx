@@ -1,14 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { css } from "@emotion/react";
-import {
-  Flex,
-  Heading,
-  useToast,
-  Input,
-  Grid,
-  Text,
-  Box,
-} from "@chakra-ui/react";
+import { Flex, Heading, useToast, Input, Grid } from "@chakra-ui/react";
+
+import NFTContainer from "../components/NFTContainer";
+import TokenContainer from "../components/TokenContainer";
 import Nav from "../components/Nav";
 import Layout from "../components/Layout";
 import Head from "../components/Head";
@@ -39,10 +34,16 @@ export default function Home() {
     }
     try {
       if (ethAddress.includes(".eth")) {
-        return await web3.eth.ens.getAddress(ethAddress);
+        const res = await web3.eth.ens.getAddress(ethAddress);
+        console.log(res);
       }
       return ethAddress;
     } catch (err) {
+      toast({
+        title: "An error occured",
+        description: err.message,
+        status: "error",
+      });
       return ethAddress;
     }
   }
@@ -128,8 +129,8 @@ export default function Home() {
               templateColumns={["repeat(2, 1fr)", null, "repeat(4, 1fr)"]}
               gap={6}
             >
-              {tokens.map((token) => (
-                <TokenContainer token={token} />
+              {tokens.map((token, idx) => (
+                <TokenContainer key={idx} token={token} />
               ))}
             </Grid>
           </Flex>
@@ -146,8 +147,12 @@ export default function Home() {
               ]}
               gap={6}
             >
-              {nfts.map((nft) => (
-                <NFTContainer metadata={nft.metadata} name={nft.name} />
+              {nfts.map((nft, idx) => (
+                <NFTContainer
+                  key={idx}
+                  metadata={nft.metadata}
+                  name={nft.name}
+                />
               ))}
             </Grid>
           </Flex>
@@ -156,87 +161,3 @@ export default function Home() {
     </Layout>
   );
 }
-
-const TokenContainer = ({ token }) => {
-  if (!token) {
-    return null;
-  }
-
-  const amount =
-    token.decimals === "0"
-      ? token.balance
-      : (parseFloat(token.balance) / 10 ** parseFloat(token.decimals)).toFixed(
-          2
-        );
-
-  return (
-    <Flex
-      mb="5"
-      p="3"
-      borderRadius={4}
-      alignItems="center"
-      css={css`
-        background: #1e0938;
-        backdrop-filter: blur(134.882px);
-      `}
-    >
-      {token.logo && (
-        <img style={{ width: "2em", marginRight: "1em" }} src={token.logo} />
-      )}
-      <Text fontWeight="700">
-        {amount} {token.symbol}
-      </Text>
-    </Flex>
-  );
-};
-
-const NFTContainer = ({ metadata, name }) => {
-  try {
-    const parsedMetadata = JSON.parse(metadata);
-
-    if (!parsedMetadata) {
-      return null;
-    }
-
-    let imageURL = parsedMetadata?.image;
-
-    if (parsedMetadata?.image.includes("ipfs://")) {
-      const IPFS_BASE_URL = "https://ipfs.io/ipfs/";
-      const normalizedURL = parsedMetadata.image.replace("ipfs/", "");
-      imageURL = IPFS_BASE_URL + normalizedURL.split("ipfs://")[1];
-    }
-
-    return (
-      <Flex
-        alignItems="center"
-        flexDirection="column"
-        height="20em"
-        width="15em"
-        borderRadius="4"
-        css={css`
-          background: #1e0938;
-          backdrop-filter: blur(134.882px);
-        `}
-      >
-        <Box
-          height="15em"
-          width="100%"
-          borderTopRadius="4"
-          backgroundPosition="center"
-          backgroundRepeat="no-repeat"
-          backgroundSize="cover"
-          backgroundImage={imageURL}
-        />
-        <Flex mt="5" width="80%">
-          <Flex justifyContent="center" width="100%" height="100%" p="2">
-            <Text textAlign="center" fontWeight="700">
-              {parsedMetadata.name ? parsedMetadata.name : name}
-            </Text>
-          </Flex>
-        </Flex>
-      </Flex>
-    );
-  } catch (err) {
-    return null;
-  }
-};
