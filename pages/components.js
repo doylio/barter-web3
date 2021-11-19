@@ -17,6 +17,7 @@ import { useMoralisWeb3Api } from "react-moralis";
 export default function Home() {
   const [ethAddress, setEthAddress] = useState("");
   const [nfts, setNFTs] = useState(null);
+  const [tokens, setTokens] = useState(null);
 
   const Web3Api = useMoralisWeb3Api();
   const toast = useToast();
@@ -27,14 +28,27 @@ export default function Home() {
         const userEthNFTs = await Web3Api.account.getNFTs({
           address: ethAddress,
         });
-        console.log(userEthNFTs);
         setNFTs(userEthNFTs.result);
       } catch (err) {
         console.log(err);
         setNFTs(null);
       }
     }
+
+    async function getTokens() {
+      try {
+        const userTokens = await Web3Api.account.getTokenBalances({
+          address: ethAddress,
+        });
+        setTokens(userTokens);
+      } catch (err) {
+        console.log(err);
+        setTokens(null);
+      }
+    }
+
     getNFTs();
+    getTokens();
   }, [ethAddress]);
 
   return (
@@ -64,8 +78,23 @@ export default function Home() {
           width="40%"
           placeholder="Address / ENS"
         />
-        {nfts.length !== 0 ? (
-          <Flex flexDirection="column">
+        {tokens && tokens.length !== 0 ? (
+          <Flex
+            width="80%"
+            mb="10"
+            flexDirection="column"
+            alignItems="flex-start"
+          >
+            <Heading mb="10">ERC20</Heading>
+            <Grid templateColumns={["repeat(4, 1fr)"]} gap={6}>
+              {tokens.map((token) => (
+                <TokenContainer token={token} />
+              ))}
+            </Grid>
+          </Flex>
+        ) : null}
+        {nfts && nfts.length !== 0 ? (
+          <Flex width="80%" flexDirection="column">
             <Heading mb="10">NFTs</Heading>
             <Grid
               templateColumns={[
@@ -87,10 +116,39 @@ export default function Home() {
   );
 }
 
+const TokenContainer = ({ token }) => {
+  if (!token) {
+    return null;
+  }
+
+  const amount =
+    token.decimals === "0"
+      ? token.balance
+      : (parseFloat(token.balance) / 10 ** parseFloat(token.decimals)).toFixed(
+          2
+        );
+
+  return (
+    <Flex
+      mb="5"
+      p="3"
+      borderRadius={4}
+      alignItems="center"
+      css={css`
+        background: #1e0938;
+        backdrop-filter: blur(134.882px);
+      `}
+    >
+      {token.logo && <img style={{ width: "2em" }} src={token.logo} />}
+      <Text fontWeight="700">
+        {amount} {token.symbol}
+      </Text>
+    </Flex>
+  );
+};
+
 const NFTContainer = ({ metadata }) => {
-  //   console.log("metadata", metadata);
   const parsedMetadata = JSON.parse(metadata);
-  //   console.log("pmetadata", parsedMetadata);
 
   if (!parsedMetadata) {
     return null;
