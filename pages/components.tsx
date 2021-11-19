@@ -43,8 +43,6 @@ export default function Home() {
       }
       return ethAddress;
     } catch (err) {
-      console.log("Error", err);
-
       return ethAddress;
     }
   }
@@ -185,48 +183,52 @@ const TokenContainer = ({ token }) => {
 };
 
 const NFTContainer = ({ metadata, name }) => {
-  const parsedMetadata = JSON.parse(metadata);
+  try {
+    const parsedMetadata = JSON.parse(metadata);
 
-  if (!parsedMetadata) {
-    return null;
-  }
+    if (!parsedMetadata) {
+      return null;
+    }
 
-  let imageURL = parsedMetadata.image;
+    let imageURL = parsedMetadata?.image;
 
-  if (parsedMetadata.image.includes("ipfs://")) {
-    const IPFS_BASE_URL = "https://ipfs.io/ipfs/";
-    const normalizedURL = parsedMetadata.image.replace("ipfs/", "");
-    imageURL = IPFS_BASE_URL + normalizedURL.split("ipfs://")[1];
-  }
+    if (parsedMetadata?.image.includes("ipfs://")) {
+      const IPFS_BASE_URL = "https://ipfs.io/ipfs/";
+      const normalizedURL = parsedMetadata.image.replace("ipfs/", "");
+      imageURL = IPFS_BASE_URL + normalizedURL.split("ipfs://")[1];
+    }
 
-  return (
-    <Flex
-      alignItems="center"
-      flexDirection="column"
-      height="20em"
-      width="15em"
-      borderRadius="4"
-      css={css`
-        background: #1e0938;
-        backdrop-filter: blur(134.882px);
-      `}
-    >
-      <Box
-        height="15em"
-        width="100%"
-        borderTopRadius="4"
-        backgroundPosition="center"
-        backgroundRepeat="no-repeat"
-        backgroundSize="cover"
-        backgroundImage={imageURL}
-      />
-      <Flex mt="5" width="80%">
-        <Flex justifyContent="center" width="100%" height="100%" p="2">
-          <Text textAlign="center" fontWeight="700">
-            {parsedMetadata.name ? parsedMetadata.name : name}
-          </Text>
+    return (
+      <Flex
+        alignItems="center"
+        flexDirection="column"
+        height="20em"
+        width="15em"
+        borderRadius="4"
+        css={css`
+          background: #1e0938;
+          backdrop-filter: blur(134.882px);
+        `}
+      >
+        <Box
+          height="15em"
+          width="100%"
+          borderTopRadius="4"
+          backgroundPosition="center"
+          backgroundRepeat="no-repeat"
+          backgroundSize="cover"
+          backgroundImage={imageURL}
+        />
+        <Flex mt="5" width="80%">
+          <Flex justifyContent="center" width="100%" height="100%" p="2">
+            <Text textAlign="center" fontWeight="700">
+              {parsedMetadata.name ? parsedMetadata.name : name}
+            </Text>
+          </Flex>
         </Flex>
       </Flex>
-    </Flex>
-  );
+    );
+  } catch (err) {
+    return null;
+  }
 };
