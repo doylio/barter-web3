@@ -10,12 +10,13 @@ import ERC721 from "../artifacts/contracts/MockERC721.sol/MockERC721.json";
 import ERC20 from "../artifacts/contracts/MockERC20.sol/MockERC20.json";
 import { useMoralis } from "react-moralis";
 import { ethers } from "ethers";
+import { trimAddress } from "../utils/ethereum";
 
-const contractAddress = "0x57b6492437615F5FaD1B87F349c02fc8A1cFAC2f";
+const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
 
 export default function Offers() {
   const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingOffers, setLoadingOffers] = useState(false);
   const { authenticate, isAuthenticated, user } = useMoralis();
   const [offers, setOffers] = useState([]);
 
@@ -23,45 +24,108 @@ export default function Offers() {
     setSent((val) => !val);
   };
 
-  useEffect(() => {
-    const grabData = async () => {
-      try {
-        const { ethereum } = window as any;
+  const grabOffers = async () => {
+    try {
+      const { ethereum } = window as any;
 
-        if (ethereum) {
-          setLoading(true);
-          const provider = new ethers.providers.Web3Provider(ethereum);
-          const signer = provider.getSigner();
-          const contract = new ethers.Contract(
-            contractAddress,
-            barter.abi,
-            signer
-          );
+      if (ethereum) {
+        setLoadingOffers(true);
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+          contractAddress,
+          barter.abi,
+          signer
+        );
 
-          let offers;
+        let offers;
 
-          console.log("Hitting contract");
+        console.log("Hitting contract");
 
-          if (sent) {
-            offers = await contract.getOffersFromMe();
-          } else {
-            offers = await contract.getOffersToMe();
-          }
-
-          console.log("Here's the transaction baby");
-          console.log(offers);
-          setOffers(offers);
+        if (sent) {
+          offers = await contract.getOffersFromMe();
+        } else {
+          offers = await contract.getOffersToMe();
         }
-      } catch (error) {
-        console.error("Error:", error);
-      }
 
-      setLoading(false);
+        console.log("Here's the transaction baby");
+        console.log(offers);
+        setOffers(offers);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+
+    setLoadingOffers(false);
+  };
+
+  useEffect(() => {
+    console.log("In UseEffect!");
+    grabOffers();
+  }, [sent]);
+
+  useEffect(() => {
+    const makeOffer = async () => {
+      const { ethereum } = window as any;
+
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+          contractAddress,
+          barter.abi,
+          signer
+        );
+        const offerBundle = {
+          offeredEther: ethers.utils.parseEther("0"),
+          tokens: {
+            amounts: [],
+            contractAddresses: [],
+          },
+          nfts: {
+            ids: [2],
+            contractAddresses: ["0x229310905439d10abd4471775863e78556b35d44"],
+          },
+        };
+
+        // Define Ask
+        const askBundle = {
+          offeredEther: ethers.utils.parseEther("0"),
+          tokens: {
+            amounts: [],
+            contractAddresses: [],
+          },
+          nfts: {
+            ids: [1],
+            contractAddresses: ["0x06b2a984ce3e1b58fd8b8d41e298b31b57513d88"],
+          },
+        };
+
+        //Flow for offering
+        const erc721 = new ethers.Contract(
+          offerBundle.nfts.contractAddresses[0],
+          ERC721.abi,
+          signer
+        );
+
+        //Account 1 allows contract to trade coins and nfts
+        const approvalTxn = await erc721.setApprovalForAll(
+          contract.address,
+          true
+        );
+        await approvalTxn.wait();
+
+        const offerTxn = await contract.createOffer(
+          "0xe898bbd704cce799e9593a9ade2c1ca0351ab660",
+          offerBundle,
+          askBundle
+        );
+        await offerTxn.wait();
+      }
     };
 
-    console.log("In UseEffect!");
-    grabData();
-  }, [sent]);
+    //makeOffer();
+  }, []);
 
   return (
     <Layout>
@@ -85,12 +149,17 @@ export default function Offers() {
         flexDirection="column"
         justifyContent="center"
       >
-        {loading ? (
+        {loadingOffers ? (
           <Spinner size="xl" color="white" />
         ) : (
           <>
-            {offers.map((offer) => (
-              <Offer sent={sent} offer={offer} />
+            {offers.map((offer, i) => (
+              <Offer
+                sent={sent}
+                offer={offer}
+                key={i}
+                refreshData={grabOffers}
+              />
             ))}
           </>
         )}
@@ -101,20 +170,35 @@ export default function Offers() {
   );
 }
 
-const Offer = ({ sent, offer }) => {
+const Offer = ({ sent, offer, refreshData }) => {
+  const [loadingAccept, setLoadingAccept] = useState(false);
+  const [loadingRescind, setLoadingRescind] = useState(false);
+
   const rescindOffer = async (offer) => {
-    const { ethereum } = window as any;
+    try {
+      const { ethereum } = window as any;
 
-    if (ethereum) {
-      const provider = new ethers.providers.Web3Provider(ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(contractAddress, barter.abi, signer);
+      if (ethereum) {
+        setLoadingRescind(true);
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+          contractAddress,
+          barter.abi,
+          signer
+        );
 
-      const id = offer.id ?? 1;
+        const id = offer.id;
 
-      const txn = await contract.acceptOffer(id);
-      await txn.wait();
+        const txn = await contract.recallOffer(id);
+        await txn.wait();
+      }
+    } catch (error) {
+      console.error("Error:", error);
     }
+
+    setLoadingRescind(false);
+    refreshData();
   };
 
   const acceptOffer = async (offer) => {
@@ -122,6 +206,7 @@ const Offer = ({ sent, offer }) => {
       const { ethereum } = window as any;
 
       if (ethereum) {
+        setLoadingAccept(true);
         const provider = new ethers.providers.Web3Provider(ethereum);
         const signer = provider.getSigner();
         const contract = new ethers.Contract(
@@ -153,56 +238,10 @@ const Offer = ({ sent, offer }) => {
           await approvalTxn.wait();
         }
 
-        const id = offer.id ?? 1;
+        const id = offer.id;
 
         const offerTxn = await contract.acceptOffer(id);
         await offerTxn.wait();
-
-        // const offerBundle = {
-        //   offeredEther: ethers.utils.parseEther("0"),
-        //   tokens: {
-        //     amounts: [],
-        //     contractAddresses: [],
-        //   },
-        //   nfts: {
-        //     ids: [3],
-        //     contractAddresses: ["0xac873d4350174c115a7c703ef0523a63e069b192"],
-        //   },
-        // };
-
-        // // Define Ask
-        // const askBundle = {
-        //   offeredEther: ethers.utils.parseEther("0"),
-        //   tokens: {
-        //     amounts: [],
-        //     contractAddresses: [],
-        //   },
-        //   nfts: {
-        //     ids: [3],
-        //     contractAddresses: ["0xf2f7af84730d54ebf3bee12b18a5a410ee55ba1c"],
-        //   },
-        // };
-
-        // Flow for offering
-        // const erc721 = new ethers.Contract(
-        //   offerBundle.nfts.contractAddresses[0],
-        //   ERC721.abi,
-        //   signer
-        // );
-
-        // //Account 1 allows contract to trade coins and nfts
-        // const approvalTxn = await erc721.setApprovalForAll(
-        //   contract.address,
-        //   true
-        // );
-        // await approvalTxn.wait();
-
-        // const offerTxn = await contract.createOffer(
-        //   "0xe898bbd704cce799e9593a9ade2c1ca0351ab660",
-        //   offerBundle,
-        //   askBundle
-        // );
-        // await offerTxn.wait();
 
         // Flow for accepting
         // const erc721 = new ethers.Contract(
@@ -224,6 +263,9 @@ const Offer = ({ sent, offer }) => {
     } catch (error) {
       console.error("Error:", error);
     }
+
+    setLoadingAccept(false);
+    refreshData();
   };
 
   const handleAcceptClick = () => {
@@ -236,6 +278,7 @@ const Offer = ({ sent, offer }) => {
 
   const left = sent ? offer.offerBundle : offer.askBundle;
   const right = sent ? offer.askBundle : offer.offerBundle;
+  const otherAddress = sent ? offer.target : offer.offerer;
 
   return (
     <Flex
@@ -286,7 +329,7 @@ const Offer = ({ sent, offer }) => {
               fontWeight="800"
               mb="10px"
             >
-              0xcfaf2....a101d{" "}
+              {trimAddress(otherAddress)}{" "}
             </Text>
           </Box>
           <Box>
@@ -302,7 +345,7 @@ const Offer = ({ sent, offer }) => {
             <Box>
               {left.tokens.contractAddresses.map((address, i) => {
                 return (
-                  <Box>
+                  <Box key={i}>
                     <Text>{`address: ${address}, amount: ${offer.offerBundle.tokens.amounts[i]}`}</Text>
                   </Box>
                 );
@@ -322,7 +365,7 @@ const Offer = ({ sent, offer }) => {
             <Box>
               {left.nfts.contractAddresses.map((address, i) => {
                 return (
-                  <Box>
+                  <Box key={i}>
                     <Text>{`address: ${address}, id: ${offer.offerBundle.nfts.ids[i]}`}</Text>
                   </Box>
                 );
@@ -341,7 +384,9 @@ const Offer = ({ sent, offer }) => {
             justifyContent="center"
             alignItems="center"
           >
-            {sent ? (
+            {loadingAccept || loadingRescind ? (
+              <Spinner color="white" />
+            ) : sent ? (
               <>
                 <Box mt="6" mb="6">
                   <img src="/pending.svg" />
@@ -354,7 +399,7 @@ const Offer = ({ sent, offer }) => {
                   align="center"
                   mb={5}
                 >
-                  Offer pending approval from 0xcfaf2....a101d
+                  Offer pending approval from {trimAddress(otherAddress)}
                 </Text>
                 <Button width="80%" onClick={handleRescindClick} warning>
                   Rescind
@@ -408,7 +453,7 @@ const Offer = ({ sent, offer }) => {
               <Box>
                 {right.tokens.contractAddresses.map((address, i) => {
                   return (
-                    <Box>
+                    <Box key={i}>
                       <Text>{`address: ${address}, amount: ${offer.askBundle.tokens.amounts[i]}`}</Text>
                     </Box>
                   );
@@ -429,7 +474,7 @@ const Offer = ({ sent, offer }) => {
             <Box>
               {right.nfts.contractAddresses.map((address, i) => {
                 return (
-                  <Box>
+                  <Box key={i}>
                     <Text>{`address: ${address}, id: ${offer.askBundle.nfts.ids[i]}`}</Text>
                   </Box>
                 );
