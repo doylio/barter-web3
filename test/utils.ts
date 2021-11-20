@@ -68,6 +68,7 @@ export const bundleJSONToArray = (j: BundleJSON): BundleArray => [
 ];
 
 export interface TradeOfferJSON {
+  id: BigNumber;
   offerer: string;
   target: string;
   offerBundle: BundleJSON;
@@ -76,6 +77,7 @@ export interface TradeOfferJSON {
 }
 
 export type TradeOfferArray = [
+  BigNumber,
   string,
   string,
   BundleArray,
@@ -84,6 +86,7 @@ export type TradeOfferArray = [
 ];
 
 export const TradeOfferJSONToArray = (j: TradeOfferJSON): TradeOfferArray => [
+  j.id,
   j.offerer,
   j.target,
   bundleJSONToArray(j.offerBundle),
@@ -94,9 +97,10 @@ export const TradeOfferJSONToArray = (j: TradeOfferJSON): TradeOfferArray => [
 export const TradeOfferArrayToJSON = (
   arr: TradeOfferArray
 ): TradeOfferJSON => ({
-  offerer: arr[0],
-  target: arr[1],
-  offerBundle: bundleArrayToJSON(arr[2]),
-  askBundle: bundleArrayToJSON(arr[3]),
-  state: arr[4],
+  id: BigNumber.from(arr[0]),
+  offerer: arr[1],
+  target: arr[2],
+  offerBundle: bundleArrayToJSON(arr[3]),
+  askBundle: bundleArrayToJSON(arr[4]),
+  state: arr[5],
 });
