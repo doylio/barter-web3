@@ -31,6 +31,7 @@ contract BarterMarket {
   }
 
   struct TradeOffer {
+    uint256 id;
     address payable offerer;
     address payable target;
     Bundle offerBundle;
@@ -88,6 +89,7 @@ contract BarterMarket {
 
     // Create the offer
     offers[offerCount] = TradeOffer(
+      offerCount,
       payable(msg.sender),
       _target,
       Bundle(
