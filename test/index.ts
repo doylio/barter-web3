@@ -133,6 +133,7 @@ describe("BarterMarket", function () {
       const offerJSON = TradeOfferArrayToJSON(offer);
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle: offerBundle,
@@ -188,6 +189,7 @@ describe("BarterMarket", function () {
       const offerJSON = TradeOfferArrayToJSON(offer);
 
       const expectedOfferJSON: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1454,6 +1456,7 @@ describe("BarterMarket", function () {
       const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1580,6 +1583,7 @@ describe("BarterMarket", function () {
       );
 
       const acc2ExpectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1595,6 +1599,7 @@ describe("BarterMarket", function () {
       );
 
       const acc3ExpectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(1),
         offerer: account1.address,
         target: account3.address,
         offerBundle: offerBundle2,
@@ -1647,6 +1652,7 @@ describe("BarterMarket", function () {
       const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1712,6 +1718,7 @@ describe("BarterMarket", function () {
       const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1772,6 +1779,7 @@ describe("BarterMarket", function () {
       const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1898,6 +1906,7 @@ describe("BarterMarket", function () {
       );
 
       const acc1ExpectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -1913,6 +1922,7 @@ describe("BarterMarket", function () {
       );
 
       const acc2ExpectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(1),
         offerer: account2.address,
         target: account3.address,
         offerBundle: offerBundle2,
@@ -1965,6 +1975,7 @@ describe("BarterMarket", function () {
       const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
@@ -2030,6 +2041,7 @@ describe("BarterMarket", function () {
       const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
 
       const expectedOffer: TradeOfferJSON = {
+        id: BigNumber.from(0),
         offerer: account1.address,
         target: account2.address,
         offerBundle,
