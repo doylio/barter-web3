@@ -1,10 +1,7 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-// import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract BarterMarket {
@@ -133,7 +130,7 @@ contract BarterMarket {
     NFTBundle memory askNfts = offer.askBundle.nfts;
 
     for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
-      IERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
+      IERC20 coinContract = IERC20(askCoins.contractAddresses[i]);
       uint256 amount = askCoins.amounts[i];
 
       require(
@@ -155,7 +152,7 @@ contract BarterMarket {
     }
 
     for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
-      ERC721 nftContract = ERC721(askNfts.contractAddresses[i]);
+      IERC721 nftContract = IERC721(askNfts.contractAddresses[i]);
 
       require(
         nftContract.ownerOf(askNfts.ids[i]) == msg.sender,
@@ -174,7 +171,7 @@ contract BarterMarket {
     NFTBundle memory offerNfts = offer.offerBundle.nfts;
 
     for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
-      IERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+      IERC20 coinContract = IERC20(offerCoins.contractAddresses[i]);
       uint256 amount = offerCoins.amounts[i];
 
       require(
@@ -196,7 +193,7 @@ contract BarterMarket {
     }
 
     for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
-      ERC721 nftContract = ERC721(offerNfts.contractAddresses[i]);
+      IERC721 nftContract = IERC721(offerNfts.contractAddresses[i]);
 
       require(
         nftContract.ownerOf(offerNfts.ids[i]) == offer.offerer,
@@ -230,19 +227,12 @@ contract BarterMarket {
     payable(msg.sender).transfer(offers[_offerId].offerBundle.offeredEther);
   }
 
-  // TODO: add a view function to get all offers made to you
-  function getValidOffersToMe() public view returns (TradeOffer[] memory) {
+  function getOffersToMe() public view returns (TradeOffer[] memory) {
     TradeOffer[] memory validOffers = new TradeOffer[](offerCount);
     uint256 i = 0;
     for (uint256 j = 0; j < offerCount; j++) {
       if (offers[j].state != State.SENT) continue;
       if (offers[j].target != msg.sender) continue;
-      if (!offererTokensAreOwnedAndApproved(j)) continue;
-      if (!offererNFTsAreOwnedAndApproved(j)) continue;
-      if (!targetHasEnoughTokens(j)) continue;
-      if (!targetOwnsNFTs(j)) continue;
-
-      // If it made it this far, it is a valid offer
       validOffers[i] = offers[j];
       i++;
     }
@@ -256,18 +246,12 @@ contract BarterMarket {
     return validOffersTrimmed;
   }
 
-  function getValidOffersFromMe() public view returns (TradeOffer[] memory) {
+  function getOffersFromMe() public view returns (TradeOffer[] memory) {
     TradeOffer[] memory validOffers = new TradeOffer[](offerCount);
     uint256 i = 0;
     for (uint256 j = 0; j < offerCount; j++) {
       if (offers[j].state != State.SENT) continue;
       if (offers[j].offerer != msg.sender) continue;
-      if (!offererTokensAreOwnedAndApproved(j)) continue;
-      if (!offererNFTsAreOwnedAndApproved(j)) continue;
-      if (!targetHasEnoughTokens(j)) continue;
-      if (!targetOwnsNFTs(j)) continue;
-
-      // If it made it this far, it is a valid offer
       validOffers[i] = offers[j];
       i++;
     }
@@ -279,67 +263,5 @@ contract BarterMarket {
     }
 
     return validOffersTrimmed;
-  }
-
-  function offererNFTsAreOwnedAndApproved(uint256 _offerId)
-    internal
-    view
-    returns (bool)
-  {
-    address offerer = offers[_offerId].offerer;
-    NFTBundle memory nfts = offers[_offerId].offerBundle.nfts;
-    for (uint256 i = 0; i < nfts.contractAddresses.length; i++) {
-      ERC721 nftContract = ERC721(nfts.contractAddresses[i]);
-      bool isOwner = nftContract.ownerOf(nfts.ids[i]) == offerer;
-      bool isApproved = nftContract.isApprovedForAll(offerer, address(this));
-      if (!isApproved || !isOwner) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function offererTokensAreOwnedAndApproved(uint256 _offerId)
-    internal
-    view
-    returns (bool)
-  {
-    address offerer = offers[_offerId].offerer;
-    CoinBundle memory coins = offers[_offerId].offerBundle.tokens;
-    for (uint256 i = 0; i < coins.contractAddresses.length; i++) {
-      ERC20 coinContract = ERC20(coins.contractAddresses[i]);
-      uint256 allowance = coinContract.allowance(offerer, address(this));
-      uint256 balance = coinContract.balanceOf(offerer);
-      if (allowance < coins.amounts[i] || balance < coins.amounts[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function targetHasEnoughTokens(uint256 _offerId)
-    internal
-    view
-    returns (bool)
-  {
-    CoinBundle memory coins = offers[_offerId].askBundle.tokens;
-    for (uint256 i = 0; i < coins.contractAddresses.length; i++) {
-      ERC20 coinContract = ERC20(coins.contractAddresses[i]);
-      if (coinContract.balanceOf(offers[_offerId].target) < coins.amounts[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  function targetOwnsNFTs(uint256 _offerId) internal view returns (bool) {
-    NFTBundle memory nfts = offers[_offerId].askBundle.nfts;
-    for (uint256 i = 0; i < nfts.contractAddresses.length; i++) {
-      ERC721 nftContract = ERC721(nfts.contractAddresses[i]);
-      if (nftContract.ownerOf(nfts.ids[i]) != offers[_offerId].target) {
-        return false;
-      }
-    }
-    return true;
   }
 }
