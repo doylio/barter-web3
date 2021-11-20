@@ -1410,4 +1410,640 @@ describe("BarterMarket", function () {
       "should revert if the full amount of a transfered token is not received"
     );
   });
+
+  describe("getOffersToMe", () => {
+    it("should return the list of offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offers = await barterMarket.connect(account2).getOffersToMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      const expectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(offersJson).to.have.lengthOf(1);
+      expect(offersJson[0]).to.deep.equal(expectedOffer);
+    });
+
+    it("should not return somebody else's offer", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offers = await barterMarket.connect(account3).getOffersToMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      expect(offersJson).to.have.lengthOf(0);
+    });
+
+    it("should only return your own offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offerBundle2: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(10)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(2)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      const askBundle2: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("5"),
+        tokens: {
+          amounts: [],
+          contractAddresses: [],
+        },
+        nfts: {
+          ids: [],
+          contractAddresses: [],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account3.address, offerBundle2, askBundle2);
+
+      const acc2Offers = await barterMarket.connect(account2).getOffersToMe();
+      const acc2OffersJson = acc2Offers.map((offer) =>
+        TradeOfferArrayToJSON(offer)
+      );
+
+      const acc2ExpectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(acc2OffersJson).to.have.lengthOf(1);
+      expect(acc2OffersJson[0]).to.deep.equal(acc2ExpectedOffer);
+
+      const acc3Offers = await barterMarket.connect(account3).getOffersToMe();
+      const acc3OffersJson = acc3Offers.map((offer) =>
+        TradeOfferArrayToJSON(offer)
+      );
+
+      const acc3ExpectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account3.address,
+        offerBundle: offerBundle2,
+        askBundle: askBundle2,
+        state: OfferState.SENT,
+      };
+      expect(acc3OffersJson).to.have.lengthOf(1);
+      expect(acc3OffersJson[0]).to.deep.equal(acc3ExpectedOffer);
+    });
+
+    it("should not include recalled offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offers = await barterMarket.connect(account2).getOffersToMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      const expectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(offersJson).to.have.lengthOf(1);
+      expect(offersJson[0]).to.deep.equal(expectedOffer);
+
+      await barterMarket.connect(account1).recallOffer(0);
+
+      const offers2 = await barterMarket.connect(account2).getOffersToMe();
+      const offers2Json = offers2.map((offer) => TradeOfferArrayToJSON(offer));
+      expect(offers2Json).to.have.lengthOf(0);
+    });
+
+    it("should not include accepted offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Target approves the token transfers
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const offers = await barterMarket.connect(account2).getOffersToMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      const expectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(offersJson).to.have.lengthOf(1);
+      expect(offersJson[0]).to.deep.equal(expectedOffer);
+
+      await barterMarket.connect(account2).acceptOffer(0);
+
+      const offers2 = await barterMarket.connect(account2).getOffersToMe();
+      const offers2Json = offers2.map((offer) => TradeOfferArrayToJSON(offer));
+      expect(offers2Json).to.have.lengthOf(0);
+    });
+  });
+
+  describe("getOffersFromMe", () => {
+    it("should return the list of offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offers = await barterMarket.connect(account1).getOffersFromMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      const expectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(offersJson).to.have.lengthOf(1);
+      expect(offersJson[0]).to.deep.equal(expectedOffer);
+    });
+
+    it("should not return somebody else's offer", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offers = await barterMarket.connect(account2).getOffersFromMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      expect(offersJson).to.have.lengthOf(0);
+    });
+
+    it("should only return your own offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offerBundle2: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(10)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(12)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      const askBundle2: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("5"),
+        tokens: {
+          amounts: [],
+          contractAddresses: [],
+        },
+        nfts: {
+          ids: [],
+          contractAddresses: [],
+        },
+      };
+
+      await barterMarket
+        .connect(account2)
+        .createOffer(account3.address, offerBundle2, askBundle2);
+
+      const acc1Offers = await barterMarket.connect(account1).getOffersFromMe();
+      const acc1OffersJson = acc1Offers.map((offer) =>
+        TradeOfferArrayToJSON(offer)
+      );
+
+      const acc1ExpectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(acc1OffersJson).to.have.lengthOf(1);
+      expect(acc1OffersJson[0]).to.deep.equal(acc1ExpectedOffer);
+
+      const acc2Offers = await barterMarket.connect(account2).getOffersFromMe();
+      const acc2OffersJson = acc2Offers.map((offer) =>
+        TradeOfferArrayToJSON(offer)
+      );
+
+      const acc2ExpectedOffer: TradeOfferJSON = {
+        offerer: account2.address,
+        target: account3.address,
+        offerBundle: offerBundle2,
+        askBundle: askBundle2,
+        state: OfferState.SENT,
+      };
+      expect(acc2OffersJson).to.have.lengthOf(1);
+      expect(acc2OffersJson[0]).to.deep.equal(acc2ExpectedOffer);
+    });
+
+    it("should not include recalled offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      const offers = await barterMarket.connect(account2).getOffersToMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      const expectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(offersJson).to.have.lengthOf(1);
+      expect(offersJson[0]).to.deep.equal(expectedOffer);
+
+      await barterMarket.connect(account1).recallOffer(0);
+
+      const offers2 = await barterMarket.connect(account2).getOffersToMe();
+      const offers2Json = offers2.map((offer) => TradeOfferArrayToJSON(offer));
+      expect(offers2Json).to.have.lengthOf(0);
+    });
+
+    it("should not include accepted offers", async () => {
+      const offerBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("1.0"),
+        tokens: {
+          amounts: [BigNumber.from(100)],
+          contractAddresses: [ERC20A.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721A.address],
+        },
+      };
+
+      // Account 1 allows contract to trade coins and nfts
+      await ERC20A.connect(account1).approve(barterMarket.address, 100);
+      await ERC721A.connect(account1).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const askBundle: BundleJSON = {
+        offeredEther: ethers.utils.parseEther("0"),
+        tokens: {
+          amounts: [BigNumber.from(50)],
+          contractAddresses: [ERC20B.address],
+        },
+        nfts: {
+          ids: [BigNumber.from(1)],
+          contractAddresses: [ERC721B.address],
+        },
+      };
+
+      await barterMarket
+        .connect(account1)
+        .createOffer(account2.address, offerBundle, askBundle, {
+          value: offerBundle.offeredEther,
+        });
+
+      // Target approves the token transfers
+      await ERC20B.connect(account2).approve(barterMarket.address, 50);
+      await ERC721B.connect(account2).setApprovalForAll(
+        barterMarket.address,
+        true
+      );
+
+      const offers = await barterMarket.connect(account2).getOffersToMe();
+      const offersJson = offers.map((offer) => TradeOfferArrayToJSON(offer));
+
+      const expectedOffer: TradeOfferJSON = {
+        offerer: account1.address,
+        target: account2.address,
+        offerBundle,
+        askBundle,
+        state: OfferState.SENT,
+      };
+      expect(offersJson).to.have.lengthOf(1);
+      expect(offersJson[0]).to.deep.equal(expectedOffer);
+
+      await barterMarket.connect(account2).acceptOffer(0);
+
+      const offers2 = await barterMarket.connect(account2).getOffersToMe();
+      const offers2Json = offers2.map((offer) => TradeOfferArrayToJSON(offer));
+      expect(offers2Json).to.have.lengthOf(0);
+    });
+  });
 });

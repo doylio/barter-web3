@@ -1,16 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "hardhat/console.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 contract BarterMarket {
-	using SafeERC20 for IERC20;
-	using SafeMath for uint256;
+  using SafeERC20 for IERC20;
 
   enum State {
     SENT,
@@ -51,8 +46,6 @@ contract BarterMarket {
 
   uint256 public offerCount;
   mapping(uint256 => TradeOffer) public offers;
-
-  constructor() {}
 
   function createOffer(
     address payable _target,
@@ -111,7 +104,7 @@ contract BarterMarket {
     );
 
     emit TradeOfferCreated(offerCount, msg.sender, _target);
-    offerCount = offerCount.add(1);
+    offerCount = offerCount + 1;
   }
 
   function acceptOffer(uint256 _offerId) public payable {
@@ -123,7 +116,7 @@ contract BarterMarket {
       "Offer amount is not equal to the amount of ETH sent"
     );
     require(offer.state == State.SENT, "This offer is no longer available");
-		require(
+    require(
       offer.offerBundle.offeredEther <= address(this).balance,
       "Not enough eth in contract"
     );
@@ -137,31 +130,29 @@ contract BarterMarket {
     NFTBundle memory askNfts = offer.askBundle.nfts;
 
     for (uint256 i = 0; i < askCoins.contractAddresses.length; i++) {
-      IERC20 coinContract = ERC20(askCoins.contractAddresses[i]);
-			uint256 amount = askCoins.amounts[i];
+      IERC20 coinContract = IERC20(askCoins.contractAddresses[i]);
+      uint256 amount = askCoins.amounts[i];
 
       require(
         coinContract.balanceOf(offer.target) >= askCoins.amounts[i],
         "Acceptor does not have enough tokens"
       );
       require(
-        coinContract.allowance(offer.target, address(this)) >=
-          amount,
+        coinContract.allowance(offer.target, address(this)) >= amount,
         "Acceptor has not allowed enough tokens"
       );
 
-			uint256 beforeBalance = coinContract.balanceOf(offer.offerer);
-      coinContract.safeTransferFrom(
-        offer.target,
-        offer.offerer,
-        amount
+      uint256 beforeBalance = coinContract.balanceOf(offer.offerer);
+      coinContract.safeTransferFrom(offer.target, offer.offerer, amount);
+      uint256 afterBalance = coinContract.balanceOf(offer.offerer);
+      require(
+        beforeBalance + amount == afterBalance,
+        "Token transfer call did not transfer expected amount"
       );
-			uint256 afterBalance = coinContract.balanceOf(offer.offerer);
-      require(beforeBalance.add(amount) == afterBalance, "Token transfer call did not transfer expected amount");
     }
 
     for (uint256 i = 0; i < askNfts.contractAddresses.length; i++) {
-      ERC721 nftContract = ERC721(askNfts.contractAddresses[i]);
+      IERC721 nftContract = IERC721(askNfts.contractAddresses[i]);
 
       require(
         nftContract.ownerOf(askNfts.ids[i]) == msg.sender,
@@ -180,7 +171,7 @@ contract BarterMarket {
     NFTBundle memory offerNfts = offer.offerBundle.nfts;
 
     for (uint256 i = 0; i < offerCoins.contractAddresses.length; i++) {
-      IERC20 coinContract = ERC20(offerCoins.contractAddresses[i]);
+      IERC20 coinContract = IERC20(offerCoins.contractAddresses[i]);
       uint256 amount = offerCoins.amounts[i];
 
       require(
@@ -188,23 +179,21 @@ contract BarterMarket {
         "Offerer does not have enough tokens"
       );
       require(
-        coinContract.allowance(offer.offerer, address(this)) >=
-          amount,
+        coinContract.allowance(offer.offerer, address(this)) >= amount,
         "Offerer has not allowed enough tokens"
       );
 
-			uint256 beforeBalance = coinContract.balanceOf(offer.target);
-      coinContract.safeTransferFrom(
-        offer.offerer,
-        offer.target,
-        amount
+      uint256 beforeBalance = coinContract.balanceOf(offer.target);
+      coinContract.safeTransferFrom(offer.offerer, offer.target, amount);
+      uint256 afterBalance = coinContract.balanceOf(offer.target);
+      require(
+        beforeBalance + amount == afterBalance,
+        "Token transfer call did not transfer expected amount"
       );
-			uint256 afterBalance = coinContract.balanceOf(offer.target);
-      require(beforeBalance.add(amount) == afterBalance, "Token transfer call did not transfer expected amount");
     }
 
     for (uint256 i = 0; i < offerNfts.contractAddresses.length; i++) {
-      ERC721 nftContract = ERC721(offerNfts.contractAddresses[i]);
+      IERC721 nftContract = IERC721(offerNfts.contractAddresses[i]);
 
       require(
         nftContract.ownerOf(offerNfts.ids[i]) == offer.offerer,
@@ -238,9 +227,41 @@ contract BarterMarket {
     payable(msg.sender).transfer(offers[_offerId].offerBundle.offeredEther);
   }
 
-  // TODO: add a view function to get all offers made to you
+  function getOffersToMe() public view returns (TradeOffer[] memory) {
+    TradeOffer[] memory validOffers = new TradeOffer[](offerCount);
+    uint256 i = 0;
+    for (uint256 j = 0; j < offerCount; j++) {
+      if (offers[j].state != State.SENT) continue;
+      if (offers[j].target != msg.sender) continue;
+      validOffers[i] = offers[j];
+      i++;
+    }
 
-  // TODO: add a view function to get all offers made by you
+    // Trim the array to the correct size
+    TradeOffer[] memory validOffersTrimmed = new TradeOffer[](i);
+    for (uint256 j = 0; j < i; j++) {
+      validOffersTrimmed[j] = validOffers[j];
+    }
 
-  // TODO: add a view function to check that an offer is valid
+    return validOffersTrimmed;
+  }
+
+  function getOffersFromMe() public view returns (TradeOffer[] memory) {
+    TradeOffer[] memory validOffers = new TradeOffer[](offerCount);
+    uint256 i = 0;
+    for (uint256 j = 0; j < offerCount; j++) {
+      if (offers[j].state != State.SENT) continue;
+      if (offers[j].offerer != msg.sender) continue;
+      validOffers[i] = offers[j];
+      i++;
+    }
+
+    // Trim the array to the correct size
+    TradeOffer[] memory validOffersTrimmed = new TradeOffer[](i);
+    for (uint256 j = 0; j < i; j++) {
+      validOffersTrimmed[j] = validOffers[j];
+    }
+
+    return validOffersTrimmed;
+  }
 }
