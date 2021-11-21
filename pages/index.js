@@ -16,8 +16,11 @@ export default function Home() {
       return (
         <HomePage
           goToAddress={(searchAddress) => {
+            console.log("seachAddress", searchAddress);
             setAddress(searchAddress);
+            console.log("setAddress");
             setPage("MakeOffer");
+            console.log("makeOffer");
           }}
         />
       );
@@ -32,7 +35,9 @@ export default function Home() {
     <Layout>
       <Head />
       <Nav
-        goToHome={() => setPage("Home")}
+        goToHome={() => {
+          setPage("Home");
+        }}
         goToOffers={() => setPage("ViewOffers")}
       />
       {renderPage()}

@@ -4,4 +4,5 @@ module.exports = {
     ignoreDuringBuilds: true,
   },
   trailingSlash: true,
+  assetPrefix: "./",
 };
