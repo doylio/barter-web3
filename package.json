@@ -21,9 +21,6 @@
   },
   "homepage": "https://github.com/doylio/barter-web3#readme",
   "devDependencies": {
-    "@chakra-ui/react": "^1.6.12",
-    "@emotion/react": "^11.5.0",
-    "@emotion/styled": "^11.3.0",
     "@nomiclabs/hardhat-ethers": "^2.0.2",
     "@nomiclabs/hardhat-etherscan": "^2.1.7",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
@@ -61,8 +58,12 @@
     "typescript": "^4.4.4"
   },
   "dependencies": {
+    "@chakra-ui/react": "^1.6.12",
+    "@emotion/react": "^11.5.0",
+    "@emotion/styled": "^11.3.0",
     "@openzeppelin/contracts": "^4.3.3",
     "@walletconnect/web3-provider": "^1.6.6",
+    "framer-motion": "^4.1.17",
     "moralis": "0.0.134",
     "next": "^12.0.4",
     "react": "^17.0.2",
