@@ -48,6 +48,11 @@ const Nav = () => {
         </Text>
       </Link>
       <Flex alignItems="center" flexDirection="row">
+        <Link href="/offers">
+          <Text cursor="pointer" color="white" fontWeight="700" mr="20px">
+            View Offers
+          </Text>
+        </Link>
         {isAuthenticated && connectedWalletAddress ? (
           <Text fontWeight="700" mr="5">
             {connectedWalletAddress}
