@@ -45,7 +45,6 @@
     "eslint-plugin-promise": "^5.1.1",
     "ethereum-waffle": "^3.4.0",
     "ethers": "^5.5.1",
-    "framer-motion": "^4.1.17",
     "hardhat": "^2.6.8",
     "hardhat-gas-reporter": "^1.0.4",
     "postcss": "^8.3.11",
