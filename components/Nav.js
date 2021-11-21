@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import Link from "next/link";
 import { useMoralis } from "react-moralis";
 
-import { hasEthereum } from "../utils/ethereum";
+import { hasEthereum, trimAddress } from "../utils/ethereum";
 import Button from "./Button";
 
 const Nav = () => {
@@ -41,8 +41,7 @@ const Nav = () => {
       <Flex alignItems="center" flexDirection="row">
         {isAuthenticated && connectedWalletAddress ? (
           <Text fontWeight="700" mr="5">
-            {connectedWalletAddress.slice(0, 6)}...
-            {connectedWalletAddress.slice(-4)}
+            {trimAddress(connectedWalletAddress)}
           </Text>
         ) : (
           <Button onClick={authenticate}>Connect Wallet</Button>
