@@ -21,6 +21,7 @@ import Head from "../../components/Head";
 import Button from "../../components/Button";
 
 import { trimAddress } from "../../utils/ethereum";
+import { ensToAddress } from "../../utils/ens";
 
 import BarterMarket from "../../artifacts/contracts/BarterMarket.sol/BarterMarket.json";
 import ERC721 from "../../artifacts/contracts/MockERC721.sol/MockERC721.json";
@@ -84,11 +85,8 @@ export default function MakeOffer() {
       return;
     }
     try {
-      if (address.includes(".eth")) {
-        const res = await web3.eth.ens.getAddress(address);
-        return res.address;
-      }
-      return address;
+      const resolvedAddress = await ensToAddress(address);
+      return resolvedAddress;
     } catch (err) {
       toast({
         title: "An error occured",
