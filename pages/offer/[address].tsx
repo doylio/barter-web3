@@ -11,6 +11,7 @@ import Head from "../../components/Head";
 import { useMoralis, useMoralisWeb3Api } from "react-moralis";
 import Button from "../../components/Button";
 import { trimAddress } from "../../utils/ethereum";
+import { ensToAddress } from "../../utils/ens";
 
 export default function MakeOffer() {
   const router = useRouter();
@@ -43,8 +44,8 @@ export default function MakeOffer() {
     }
     try {
       if (address.includes(".eth")) {
-        const res = await web3.eth.ens.getAddress(address);
-        return res.address;
+        const res = await ensToAddress(address as string);
+        return res;
       }
       return address;
     } catch (err) {
