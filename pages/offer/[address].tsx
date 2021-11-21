@@ -313,10 +313,13 @@ export default function MakeOffer() {
               {offerTokens.map((token) => (
                 <Text>{`${token.amount.toFixed(5)} ${token.symbol}`}</Text>
               ))}
-              <Text>
-                {" "}
-                and {offerNFTs?.length} NFT{offerNFTs?.length === 1 ? "" : "s"}
-              </Text>
+              {offerTokens.length && offerNFTs.length ? "and" : ""}
+              {offerNFTs.length === 0 ? null : (
+                <Text>
+                  {offerNFTs?.length} NFT
+                  {offerNFTs?.length === 1 ? "" : "s"}
+                </Text>
+              )}
             </Flex>
             <Box mt="10" mb="10">
               <img src="/arrows.svg" />
