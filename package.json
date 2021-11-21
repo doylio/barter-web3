@@ -62,6 +62,7 @@
     "@emotion/styled": "^11.3.0",
     "@openzeppelin/contracts": "^4.3.3",
     "@walletconnect/web3-provider": "^1.6.6",
+    "axios": "^0.24.0",
     "framer-motion": "^4.1.17",
     "moralis": "0.0.134",
     "next": "^12.0.4",

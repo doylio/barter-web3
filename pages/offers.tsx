@@ -8,9 +8,11 @@ import { css } from "@emotion/react";
 import barter from "../artifacts/contracts/BarterMarket.sol/BarterMarket.json";
 import ERC721 from "../artifacts/contracts/MockERC721.sol/MockERC721.json";
 import ERC20 from "../artifacts/contracts/MockERC20.sol/MockERC20.json";
-import { useMoralis } from "react-moralis";
 import { ethers } from "ethers";
 import { trimAddress } from "../utils/ethereum";
+import { useMoralis, useMoralisWeb3Api } from "react-moralis";
+import { getNFTData } from "../utils/data";
+import TokenContainer from "../components/TokenContainer";
 
 const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
 
@@ -76,11 +78,12 @@ export default function Offers() {
           barter.abi,
           signer
         );
+
         const offerBundle = {
           offeredEther: ethers.utils.parseEther("0"),
           tokens: {
-            amounts: [],
-            contractAddresses: [],
+            amounts: [100],
+            contractAddresses: ["0xc7ad46e0b8a400bb3c915120d284aafba8fc4735"],
           },
           nfts: {
             ids: [2],
@@ -109,14 +112,22 @@ export default function Offers() {
         );
 
         //Account 1 allows contract to trade coins and nfts
-        const approvalTxn = await erc721.setApprovalForAll(
+        let approvalTxn = await erc721.setApprovalForAll(
           contract.address,
           true
         );
         await approvalTxn.wait();
 
+        const erc20 = new ethers.Contract(
+          offerBundle.tokens.contractAddresses[0],
+          ERC20.abi,
+          signer
+        );
+        approvalTxn = await erc20.approve(contractAddress, 100);
+        await approvalTxn.wait();
+
         const offerTxn = await contract.createOffer(
-          "0xe898bbd704cce799e9593a9ade2c1ca0351ab660",
+          "0xE898BBd704CCE799e9593a9ADe2c1cA0351Ab660",
           offerBundle,
           askBundle
         );
@@ -124,7 +135,7 @@ export default function Offers() {
       }
     };
 
-    //makeOffer();
+    makeOffer();
   }, []);
 
   return (
@@ -173,6 +184,132 @@ export default function Offers() {
 const Offer = ({ sent, offer, refreshData }) => {
   const [loadingAccept, setLoadingAccept] = useState(false);
   const [loadingRescind, setLoadingRescind] = useState(false);
+  const [loadingMetaData, setLoadingMetaData] = useState(false);
+  const [offerNFTs, setOfferNFTs] = useState([]);
+  const [askNFTs, setAskNFTs] = useState([]);
+  const [offerTokens, setOfferTokens] = useState([]);
+  const [askTokens, setAskTokens] = useState([]);
+  const Web3Api = useMoralisWeb3Api();
+
+  const grabNFTMetaData = async (offer): Promise<[any[], any[]]> => {
+    const data = await getNFTData(
+      [
+        ...offer.offerBundle.nfts.contractAddresses,
+        ...offer.askBundle.nfts.contractAddresses,
+      ],
+      [...offer.offerBundle.nfts.ids, ...offer.askBundle.nfts.ids].map((n) =>
+        n.toNumber()
+      )
+    );
+
+    const offerNFTs = data.filter((nft) => {
+      for (let i = 0; i < offer.offerBundle.nfts.ids.length; i++) {
+        const id = offer.offerBundle.nfts.ids[i].toNumber();
+        const address = offer.offerBundle.nfts.contractAddresses[i];
+
+        if (
+          nft.asset_contract.address.toUpperCase() === address.toUpperCase() &&
+          nft.token_id == id.toString()
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    const askNFTs = data.filter((nft) => {
+      for (let i = 0; i < offer.askBundle.nfts.ids.length; i++) {
+        const id = offer.askBundle.nfts.ids[i].toNumber();
+        const address = offer.askBundle.nfts.contractAddresses[i];
+
+        if (
+          nft.asset_contract.address.toUpperCase() === address.toUpperCase() &&
+          nft.token_id == id.toString()
+        ) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    return [askNFTs, offerNFTs];
+  };
+
+  const grabTokenMetaData = async (offer): Promise<[any[], any[]]> => {
+    const offerAddresses = offer.offerBundle.tokens.contractAddresses;
+    let offerTokens = [];
+
+    if (offerAddresses.length) {
+      offerTokens = await Web3Api.token.getTokenMetadata({
+        chain: "rinkeby",
+        addresses: offerAddresses,
+      });
+    }
+
+    const askAddresses = offer.askBundle.tokens.contractAddresses;
+    let askTokens = [];
+
+    if (askAddresses.length) {
+      askTokens = await Web3Api.token.getTokenMetadata({
+        chain: "rinkeby",
+        addresses: askAddresses,
+      });
+    }
+
+    // To get tokens to display in token container, lol this is hacky
+    // to-do huge token balances that will overflow js numbers
+    offerTokens = offerTokens.map((token, i) => {
+      console.log(offer.offerBundle.tokens.amounts[i].toNumber());
+
+      return {
+        ...token,
+        decimals: "0",
+        balance: offer.offerBundle.tokens.amounts[i].toNumber().toString(),
+      };
+    });
+
+    askTokens = askTokens.map((token, i) => {
+      return {
+        ...token,
+        decimals: "0",
+        balance: offer.askBundle.tokens.amounts[i].toNumber().toString(),
+      };
+    });
+
+    return [askTokens, offerTokens];
+  };
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        setLoadingMetaData(true);
+
+        const [askNFTs, offerNFTs] = await grabNFTMetaData(offer);
+        const [askTokens, offerTokens] = await grabTokenMetaData(offer);
+
+        setAskNFTs(askNFTs);
+        setOfferNFTs(offerNFTs);
+        setOfferTokens(offerTokens);
+        setAskTokens(askTokens);
+        setLoadingMetaData(false);
+      } catch (error) {
+        // handle later
+        console.log(error);
+      }
+    };
+
+    getData();
+  }, [offer]);
+
+  const leftNFTs = offerNFTs;
+  const rightNFTs = askNFTs;
+  const leftTokens = offerTokens;
+  const rightTokens = askTokens;
+  const otherAddress = sent ? offer.target : offer.offerer;
+
+  console.log(otherAddress);
 
   const rescindOffer = async (offer) => {
     try {
@@ -242,23 +379,6 @@ const Offer = ({ sent, offer, refreshData }) => {
 
         const offerTxn = await contract.acceptOffer(id);
         await offerTxn.wait();
-
-        // Flow for accepting
-        // const erc721 = new ethers.Contract(
-        //   askBundle.nfts.contractAddresses[0],
-        //   ERC721.abi,
-        //   signer
-        // );
-
-        // //Account 1 allows contract to trade coins and nfts
-        // const approvalTxn = await erc721.setApprovalForAll(
-        //   contract.address,
-        //   true
-        // );
-        // await approvalTxn.wait();
-
-        // const offerTxn = await contract.acceptOffer(0);
-        // await offerTxn.wait();
       }
     } catch (error) {
       console.error("Error:", error);
@@ -275,10 +395,6 @@ const Offer = ({ sent, offer, refreshData }) => {
   const handleRescindClick = () => {
     rescindOffer(offer);
   };
-
-  const left = sent ? offer.offerBundle : offer.askBundle;
-  const right = sent ? offer.askBundle : offer.offerBundle;
-  const otherAddress = sent ? offer.target : offer.offerer;
 
   return (
     <Flex
@@ -312,7 +428,7 @@ const Offer = ({ sent, offer, refreshData }) => {
           pl="40px"
           pb="40px"
         >
-          <Box>
+          <Box minHeight="72px">
             <Text
               cursor="pointer"
               color="white"
@@ -323,8 +439,7 @@ const Offer = ({ sent, offer, refreshData }) => {
             </Text>{" "}
             <Text
               cursor="pointer"
-              color="#3BACE2
-									"
+              color="#3BACE2"
               fontSize="2xl"
               fontWeight="800"
               mb="10px"
@@ -332,26 +447,24 @@ const Offer = ({ sent, offer, refreshData }) => {
               {trimAddress(otherAddress)}{" "}
             </Text>
           </Box>
-          <Box>
-            <Text
-              cursor="pointer"
-              color="white"
-              fontSize="2xl"
-              fontWeight="400"
-              mb="10px"
-            >
-              ERC-20
-            </Text>
+          {leftTokens.length > 0 && (
             <Box>
-              {left.tokens.contractAddresses.map((address, i) => {
-                return (
-                  <Box key={i}>
-                    <Text>{`address: ${address}, amount: ${offer.offerBundle.tokens.amounts[i]}`}</Text>
-                  </Box>
-                );
-              })}
+              <Text
+                cursor="pointer"
+                color="white"
+                fontSize="2xl"
+                fontWeight="400"
+                mb="10px"
+              >
+                ERC-20
+              </Text>
+              <Box>
+                {offerTokens.map((token, i) => {
+                  return <TokenContainer token={token} key={i} />;
+                })}
+              </Box>
             </Box>
-          </Box>
+          )}
           <Box>
             <Text
               cursor="pointer"
@@ -363,13 +476,19 @@ const Offer = ({ sent, offer, refreshData }) => {
               NFTs
             </Text>
             <Box>
-              {left.nfts.contractAddresses.map((address, i) => {
-                return (
-                  <Box key={i}>
-                    <Text>{`address: ${address}, id: ${offer.offerBundle.nfts.ids[i]}`}</Text>
-                  </Box>
-                );
-              })}
+              {loadingMetaData ? (
+                <Spinner color="white" />
+              ) : (
+                offerNFTs.map((nft, i) => {
+                  return (
+                    <NFTContainer
+                      imgUrl={nft.image_url}
+                      name={nft.name}
+                      key={nft.name + i}
+                    />
+                  );
+                })
+              )}
             </Box>
           </Box>
         </Flex>
@@ -429,7 +548,7 @@ const Offer = ({ sent, offer, refreshData }) => {
           pr="40px"
           pb="40px"
         >
-          <Box>
+          <Box minHeight="72px">
             <Text
               cursor="pointer"
               color="white"
@@ -439,28 +558,24 @@ const Offer = ({ sent, offer, refreshData }) => {
               {sent ? "Your Request" : "Their Request"}
             </Text>{" "}
           </Box>
-          <Box>
-            <Text
-              cursor="pointer"
-              color="white"
-              fontSize="2xl"
-              fontWeight="400"
-              mb="10px"
-            >
-              ERC-20
-            </Text>
+          {askTokens.length > 0 && (
             <Box>
+              <Text
+                cursor="pointer"
+                color="white"
+                fontSize="2xl"
+                fontWeight="400"
+                mb="10px"
+              >
+                ERC-20
+              </Text>
               <Box>
-                {right.tokens.contractAddresses.map((address, i) => {
-                  return (
-                    <Box key={i}>
-                      <Text>{`address: ${address}, amount: ${offer.askBundle.tokens.amounts[i]}`}</Text>
-                    </Box>
-                  );
+                {askTokens.map((token, i) => {
+                  return <TokenContainer token={token} key={i} />;
                 })}
               </Box>
             </Box>
-          </Box>
+          )}
           <Box>
             <Text
               cursor="pointer"
@@ -472,17 +587,56 @@ const Offer = ({ sent, offer, refreshData }) => {
               NFTs
             </Text>
             <Box>
-              {right.nfts.contractAddresses.map((address, i) => {
-                return (
-                  <Box key={i}>
-                    <Text>{`address: ${address}, id: ${offer.askBundle.nfts.ids[i]}`}</Text>
-                  </Box>
-                );
-              })}
+              {loadingMetaData ? (
+                <Spinner color="white" />
+              ) : (
+                askNFTs.map((nft, i) => {
+                  return (
+                    <NFTContainer
+                      imgUrl={nft.image_url}
+                      name={nft.name}
+                      key={nft.name + i}
+                    />
+                  );
+                })
+              )}
             </Box>
           </Box>
         </Flex>
       </Grid>
+    </Flex>
+  );
+};
+
+const NFTContainer = ({ imgUrl, name }) => {
+  return (
+    <Flex
+      alignItems="center"
+      flexDirection="column"
+      height="20em"
+      width="15em"
+      borderRadius="4"
+      css={css`
+        background: #1e0938;
+        backdrop-filter: blur(134.882px);
+      `}
+    >
+      <Box
+        height="15em"
+        width="100%"
+        borderTopRadius="4"
+        backgroundPosition="center"
+        backgroundRepeat="no-repeat"
+        backgroundSize="cover"
+        backgroundImage={imgUrl}
+      />
+      <Flex mt="5" width="80%">
+        <Flex justifyContent="center" width="100%" height="100%" p="2">
+          <Text textAlign="center" fontWeight="700">
+            {name}
+          </Text>
+        </Flex>
+      </Flex>
     </Flex>
   );
 };
