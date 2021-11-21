@@ -1,4 +1,4 @@
-import { default as NextHead } from "next/Head";
+import { default as NextHead } from "next/head";
 
 const Head = ({ title, description }) => {
   return (
