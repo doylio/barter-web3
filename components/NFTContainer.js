@@ -13,7 +13,12 @@ export const nftContainerSizes = {
   },
 };
 
-const NFTContainer = ({ nft, size = nftContainerSizes.md }) => {
+const NFTContainer = ({
+  nft,
+  size = nftContainerSizes.md,
+  isSelected = false,
+  onClick,
+}) => {
   const [metadata, setMetadata] = useState(null);
   const [imageURL, setImageURL] = useState(null);
 
@@ -49,7 +54,7 @@ const NFTContainer = ({ nft, size = nftContainerSizes.md }) => {
 
       if (parsedMetadata?.image.includes("ipfs://")) {
         const IPFS_BASE_URL = "https://ipfs.io/ipfs/";
-        const normalizedURL = parsedMetadata.image.replace("ipfs/", "");
+        const normalizedURL = parsedMetadata?.image.replace("ipfs/", "");
         imageURL = IPFS_BASE_URL + normalizedURL.split("ipfs://")[1];
       }
 
@@ -73,6 +78,8 @@ const NFTContainer = ({ nft, size = nftContainerSizes.md }) => {
   if (metadata) {
     return (
       <Flex
+        onClick={onClick}
+        border={isSelected ? "2px solid #FFA6FA" : null}
         alignItems="center"
         flexDirection="column"
         height={size.height}
