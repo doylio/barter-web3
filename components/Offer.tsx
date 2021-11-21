@@ -82,9 +82,9 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
 
     if (offerAddresses.length) {
       offerTokens = await Web3Api.token.getTokenMetadata({
-        chain: "rinkeby",
+        chain: process.env.NEXT_PUBLIC_CHAIN,
         addresses: offerAddresses,
-      });
+      } as any);
     }
 
     const askAddresses = offer.askBundle.tokens.contractAddresses;
@@ -92,9 +92,9 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
 
     if (askAddresses.length) {
       askTokens = await Web3Api.token.getTokenMetadata({
-        chain: "rinkeby",
+        chain: process.env.NEXT_PUBLIC_CHAIN,
         addresses: askAddresses,
-      });
+      } as any);
     }
 
     // To get tokens to display in token container, lol this is hacky

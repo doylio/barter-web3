@@ -66,7 +66,7 @@ export default function Offers() {
         flex="1"
         alignItems="center"
         flexDirection="column"
-        justifyContent="center"
+        justifyContent="flex-start"
         alignSelf="center"
         width={"80%"}
       >
