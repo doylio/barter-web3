@@ -422,9 +422,7 @@ const TokenList = ({ tokens, loading }) => {
       {loading ? (
         <Spinner color="white" m="10px" />
       ) : (
-        tokens.map((token, i) => {
-          return <TokenDisplay token={token} key={i} />;
-        })
+        tokens.map((token, i) => <TokenDisplay token={token} key={i} />)
       )}
     </Box>
   );
@@ -436,15 +434,13 @@ const NFTList = ({ nfts, loading }) => {
       {loading ? (
         <Spinner color="white" m="10px" />
       ) : (
-        nfts.map((nft, i) => {
-          return (
-            <NFTContainer
-              imgUrl={nft.image_url}
-              name={nft.name}
-              key={nft.name + i}
-            />
-          );
-        })
+        nfts.map((nft, i) => (
+          <NFTContainer
+            imgUrl={nft.image_url}
+            name={nft.name}
+            key={nft.name + i}
+          />
+        ))
       )}
     </Box>
   );
@@ -455,8 +451,7 @@ const NFTContainer = ({ imgUrl, name }) => {
     <Flex
       alignItems="center"
       flexDirection="column"
-      height="20em"
-      width="15em"
+      width="100%"
       borderRadius="4"
       css={css`
         background: #1e0938;

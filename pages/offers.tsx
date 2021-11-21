@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Flex, Heading, Spinner, useToast } from "@chakra-ui/react";
+import { Flex, Heading, Spinner, useToast, Text, Box } from "@chakra-ui/react";
 import Nav from "../components/Nav";
 import Layout from "../components/Layout";
 import Head from "../components/Head";
 import Button from "../components/Button";
 import barter from "../artifacts/contracts/BarterMarket.sol/BarterMarket.json";
 import { ethers } from "ethers";
-import { useMoralis } from "react-moralis";
 import Offer from "../components/Offer";
 
 const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
@@ -14,7 +13,6 @@ const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
 export default function Offers() {
   const [sent, setSent] = useState(false);
   const [loadingOffers, setLoadingOffers] = useState(false);
-  const { authenticate, isAuthenticated, user } = useMoralis();
   const [offers, setOffers] = useState([]);
   const toast = useToast();
 
@@ -64,23 +62,27 @@ export default function Offers() {
       <Head title="Barter Web3" description="hi" />
       <Nav />
       <Flex
-        justifyContent="space-between"
-        alignItems="center"
-        pr="40px"
-        pl="40px"
-      >
-        <Heading>{sent ? "Sent Offers" : "Received Offers"}</Heading>
-        <Button width="auto" onClick={changeView}>
-          {sent ? "View Received Offers" : "View Sent Offers"}
-        </Button>
-      </Flex>
-      <Flex
         p="10"
         flex="1"
         alignItems="center"
         flexDirection="column"
         justifyContent="center"
+        alignSelf="center"
+        width={"80%"}
       >
+        <Flex
+          justifyContent="space-between"
+          alignItems="center"
+          mb="20px"
+          width={"100%"}
+        >
+          <Text cursor="pointer" color="white" fontSize="2xl" fontWeight="400">
+            {sent ? "Sent Offers" : "Received Offers"}
+          </Text>
+          <Button width="auto" onClick={changeView}>
+            {sent ? "View Received Offers" : "View Sent Offers"}
+          </Button>
+        </Flex>
         {loadingOffers ? (
           <Spinner size="xl" color="white" />
         ) : (
