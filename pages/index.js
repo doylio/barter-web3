@@ -32,6 +32,7 @@ export default function Home() {
             box-sizing: border-box;
             box-shadow: 0px 40px 50px rgba(255, 86, 246, 0.58);
             border-radius: 4px;
+            padding: 70px;
           `}
         >
           <Heading fontSize={["36", "48", null, null, "52"]} textAlign="center">
