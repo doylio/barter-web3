@@ -13,26 +13,23 @@ import { ethers } from "ethers";
 import { useMoralis, useMoralisWeb3Api } from "react-moralis";
 import { BigNumber } from "@ethersproject/bignumber";
 
-import NFTContainer, { nftContainerSizes } from "../../components/NFTContainer";
-import TokenContainer from "../../components/TokenContainer";
-import Nav from "../../components/Nav";
-import Layout from "../../components/Layout";
-import Head from "../../components/Head";
-import Button from "../../components/Button";
+import NFTContainer, { nftContainerSizes } from "./NFTContainer";
+import TokenContainer from "./TokenContainer";
+import Nav from "./Nav";
+import Layout from "./Layout";
+import Head from "./Head";
+import Button from "./Button";
 
-import { trimAddress } from "../../utils/ethereum";
-import { ensToAddress } from "../../utils/ens";
+import { trimAddress } from "../utils/ethereum";
+import { ensToAddress } from "../utils/ens";
 
-import BarterMarket from "../../artifacts/contracts/BarterMarket.sol/BarterMarket.json";
-import ERC721 from "../../artifacts/contracts/MockERC721.sol/MockERC721.json";
-import ERC20 from "../../artifacts/contracts/MockERC20.sol/MockERC20.json";
+import BarterMarket from "../artifacts/contracts/BarterMarket.sol/BarterMarket.json";
+import ERC721 from "../artifacts/contracts/MockERC721.sol/MockERC721.json";
+import ERC20 from "../artifacts/contracts/MockERC20.sol/MockERC20.json";
 
 const CONTRACT_ADDRESS = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
 
-export default function MakeOffer() {
-  const router = useRouter();
-  const { address } = router.query;
-
+export default function MakeOfferPage({ address }: { address: string }) {
   const [txnLoading, setTxnLoading] = useState(false);
   const [barterMarket, setBarterMarket] = useState(null);
 
@@ -279,80 +276,76 @@ export default function MakeOffer() {
   };
 
   return (
-    <Layout>
-      <Head title="Barter Web3 - Make Offer" />
-      <Nav />
-      <Flex
-        width="100%"
-        p="20"
-        flex="1"
-        alignItems="space-between"
-        flexDirection="row"
-      >
-        {/* My Offer Column */}
-        <Flex flex="2" flexDirection="column">
-          <Heading size="lg">Make your offer</Heading>
-          <Flex flexDirection="column">
-            <TokensGrid selectToken={selectToken} tokens={myTokens} />
-            <NFTsGrid
-              isOwner={true}
-              toggleSelect={toggleSelectNFT}
-              selectedNFTs={offerNFTs}
-              nfts={myNFTs}
-            />
-          </Flex>
-        </Flex>
-
-        {/* Offer CTA  */}
-        <Flex justifyContent="flex-start" flex="1.5" flexDirection="column">
-          <Flex flexDirection="column" maxWidth="70%" alignItems="center">
-            <Flex flexDirection="column" fontWeight="700" textAlign="center">
-              <Text> You're offering</Text>
-              {offerTokens.map((token) => (
-                <Text>{`${token.amount.toFixed(5)} ${token.symbol}`}</Text>
-              ))}
-              {offerTokens.length && offerNFTs.length ? "and" : ""}
-              {offerNFTs.length === 0 ? null : (
-                <Text>
-                  {offerNFTs?.length} NFT
-                  {offerNFTs?.length === 1 ? "" : "s"}
-                </Text>
-              )}
-            </Flex>
-            <Box mt="10" mb="10">
-              <img src="/arrows.svg" />
-            </Box>
-            {txnLoading ? (
-              <Spinner />
-            ) : (
-              <Button onClick={createOffer} width="70%">
-                Offer barter
-              </Button>
-            )}
-          </Flex>
-        </Flex>
-        {/* Counterparty Column */}
-        <Flex flex="2" flexDirection="column">
-          <Heading size="lg">
-            Assets owned by{" "}
-            <span style={{ color: "#3bace2" }}>{trimAddress(address)}</span>
-          </Heading>
-          <Flex flexDirection="column">
-            <TokensGrid
-              selectToken={selectToken}
-              isOwner={false}
-              tokens={cpTokens}
-            />
-            <NFTsGrid
-              isOwner={false}
-              toggleSelect={toggleSelectNFT}
-              selectedNFTs={askNFTs}
-              nfts={cpNfts}
-            />
-          </Flex>
+    <Flex
+      width="100%"
+      p="20"
+      flex="1"
+      alignItems="space-between"
+      flexDirection="row"
+    >
+      {/* My Offer Column */}
+      <Flex flex="2" flexDirection="column">
+        <Heading size="lg">Make your offer</Heading>
+        <Flex flexDirection="column">
+          <TokensGrid selectToken={selectToken} tokens={myTokens} />
+          <NFTsGrid
+            isOwner={true}
+            toggleSelect={toggleSelectNFT}
+            selectedNFTs={offerNFTs}
+            nfts={myNFTs}
+          />
         </Flex>
       </Flex>
-    </Layout>
+
+      {/* Offer CTA  */}
+      <Flex justifyContent="flex-start" flex="1.5" flexDirection="column">
+        <Flex flexDirection="column" maxWidth="70%" alignItems="center">
+          <Flex flexDirection="column" fontWeight="700" textAlign="center">
+            <Text> You're offering</Text>
+            {offerTokens.map((token) => (
+              <Text>{`${token.amount.toFixed(5)} ${token.symbol}`}</Text>
+            ))}
+            {offerTokens.length && offerNFTs.length ? "and" : ""}
+            {offerNFTs.length === 0 ? null : (
+              <Text>
+                {offerNFTs?.length} NFT
+                {offerNFTs?.length === 1 ? "" : "s"}
+              </Text>
+            )}
+          </Flex>
+          <Box mt="10" mb="10">
+            <img src="/arrows.svg" />
+          </Box>
+          {txnLoading ? (
+            <Spinner />
+          ) : (
+            <Button onClick={createOffer} width="70%">
+              Offer barter
+            </Button>
+          )}
+        </Flex>
+      </Flex>
+      {/* Counterparty Column */}
+      <Flex flex="2" flexDirection="column">
+        <Heading size="lg">
+          Assets owned by{" "}
+          <span style={{ color: "#3bace2" }}>{trimAddress(address)}</span>
+        </Heading>
+        <Flex flexDirection="column">
+          <TokensGrid
+            selectToken={selectToken}
+            isOwner={false}
+            tokens={cpTokens}
+          />
+          <NFTsGrid
+            isOwner={false}
+            toggleSelect={toggleSelectNFT}
+            selectedNFTs={askNFTs}
+            nfts={cpNfts}
+          />
+        </Flex>
+      </Flex>
+    </Flex>
   );
 }
 

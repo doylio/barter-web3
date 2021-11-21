@@ -10,7 +10,7 @@ import Offer from "../components/Offer";
 
 const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
 
-export default function Offers() {
+export default function ViewOffersPage() {
   const [sent, setSent] = useState(false);
   const [loadingOffers, setLoadingOffers] = useState(false);
   const [offers, setOffers] = useState([]);
@@ -58,48 +58,37 @@ export default function Offers() {
   }, [sent]);
 
   return (
-    <Layout>
-      <Head title="Barter Web3" description="hi" />
-      <Nav />
+    <Flex
+      p="10"
+      flex="1"
+      alignItems="center"
+      flexDirection="column"
+      justifyContent="flex-start"
+      alignSelf="center"
+      width={"80%"}
+    >
       <Flex
-        p="10"
-        flex="1"
+        justifyContent="space-between"
         alignItems="center"
-        flexDirection="column"
-        justifyContent="flex-start"
-        alignSelf="center"
-        width={"80%"}
+        mb="20px"
+        width={"100%"}
       >
-        <Flex
-          justifyContent="space-between"
-          alignItems="center"
-          mb="20px"
-          width={"100%"}
-        >
-          <Text cursor="pointer" color="white" fontSize="2xl" fontWeight="400">
-            {sent ? "Sent Offers" : "Received Offers"}
-          </Text>
-          <Button width="auto" onClick={changeView}>
-            {sent ? "View Received Offers" : "View Sent Offers"}
-          </Button>
-        </Flex>
-        {loadingOffers ? (
-          <Spinner size="xl" color="white" />
-        ) : (
-          <>
-            {offers.map((offer, i) => (
-              <Offer
-                sent={sent}
-                offer={offer}
-                key={i}
-                refreshData={grabOffers}
-              />
-            ))}
-          </>
-        )}
+        <Text cursor="pointer" color="white" fontSize="2xl" fontWeight="400">
+          {sent ? "Sent Offers" : "Received Offers"}
+        </Text>
+        <Button width="auto" onClick={changeView}>
+          {sent ? "View Received Offers" : "View Sent Offers"}
+        </Button>
       </Flex>
-
-      <footer></footer>
-    </Layout>
+      {loadingOffers ? (
+        <Spinner size="xl" color="white" />
+      ) : (
+        <>
+          {offers.map((offer, i) => (
+            <Offer sent={sent} offer={offer} key={i} refreshData={grabOffers} />
+          ))}
+        </>
+      )}
+    </Flex>
   );
 }

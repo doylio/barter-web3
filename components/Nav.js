@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Flex, Text, Box } from "@chakra-ui/react";
 import { ethers } from "ethers";
-import Link from "next/link";
 import { useMoralis } from "react-moralis";
 
 import { hasEthereum, trimAddress } from "../utils/ethereum";
 import Button from "./Button";
 import { addressToEns } from "../utils/ens";
 
-const Nav = () => {
+const Nav = ({ goToOffers, goToHome }) => {
   const [connectedWalletAddress, setConnectedWalletAddressState] = useState("");
   const { authenticate, isAuthenticated, user } = useMoralis();
 
@@ -42,17 +41,26 @@ const Nav = () => {
 
   return (
     <Flex p="5" width="100%" justifyContent="space-between">
-      <Link href="/">
-        <Text cursor="pointer" color="white" fontSize="2xl" fontWeight="800">
-          BarterWeb3
-        </Text>
-      </Link>
+      <Text
+        cursor="pointer"
+        color="white"
+        fontSize="2xl"
+        fontWeight="800"
+        onClick={goToHome}
+      >
+        BarterWeb3
+      </Text>
+
       <Flex alignItems="center" flexDirection="row">
-        <a href="/offers">
-          <Text cursor="pointer" color="white" fontWeight="700" mr="20px">
-            View Offers
-          </Text>
-        </a>
+        <Text
+          cursor="pointer"
+          color="white"
+          fontWeight="700"
+          mr="20px"
+          onClick={goToOffers}
+        >
+          View Offers
+        </Text>
         {isAuthenticated && connectedWalletAddress ? (
           <Text fontWeight="700" mr="5">
             {connectedWalletAddress}
