@@ -9,7 +9,7 @@ import { ethers } from "ethers";
 import { trimAddress } from "../utils/ethereum";
 import { useMoralisWeb3Api } from "react-moralis";
 import { getNFTData } from "../utils/data";
-import TokenContainer from "../components/TokenContainer";
+import TokenDisplay from "../components/TokenDisplay";
 
 const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
 
@@ -423,7 +423,7 @@ const TokenList = ({ tokens, loading }) => {
         <Spinner color="white" m="10px" />
       ) : (
         tokens.map((token, i) => {
-          return <TokenContainer token={token} key={i} />;
+          return <TokenDisplay token={token} key={i} />;
         })
       )}
     </Box>
