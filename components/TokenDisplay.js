@@ -2,7 +2,7 @@ import React from "react";
 import { Flex, Text } from "@chakra-ui/react";
 import { css } from "@emotion/react";
 
-const TokenDisplay = ({ token }) => {
+const TokenDisplay = ({ token, mb = 5 }) => {
   if (!token) {
     return null;
   }
@@ -16,7 +16,7 @@ const TokenDisplay = ({ token }) => {
 
   return (
     <Flex
-      mb="5"
+      mb={mb}
       p="3"
       borderRadius={4}
       alignItems="center"

@@ -27,9 +27,9 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
   const [askNFTs, setAskNFTs] = useState([]);
   const [offerTokens, setOfferTokens] = useState([]);
   const [askTokens, setAskTokens] = useState([]);
-  const [otherAddress, setOtherAddress] = useState(
-    sent ? offer.target : offer.offerer
-  );
+  const [ens, setEns] = useState(null);
+
+  const otherAddress = sent ? offer.target : offer.offerer;
 
   const Web3Api = useMoralisWeb3Api();
   const toast = useToast();
@@ -144,6 +144,8 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
           description: error.message,
           status: "error",
         });
+      } finally {
+        setLoadingMetaData(false);
       }
     };
 
@@ -154,7 +156,7 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
     const resolveENS = async () => {
       const ens = await addressToEns(otherAddress);
       if (ens) {
-        setOtherAddress(ens);
+        setEns(ens);
       }
     };
 
@@ -302,7 +304,7 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
               fontWeight="800"
               mb="10px"
             >
-              {trimAddress(otherAddress)}{" "}
+              {ens ?? trimAddress(otherAddress)}
             </Text>
             <AssetColumn
               tokens={offerTokens}
@@ -339,7 +341,7 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
                   align="center"
                   mb={5}
                 >
-                  Offer pending approval from {trimAddress(otherAddress)}
+                  Offer pending approval from {ens ?? trimAddress(otherAddress)}
                 </Text>
                 <Button width="80%" onClick={handleRescindClick} warning>
                   Rescind
