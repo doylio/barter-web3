@@ -9,6 +9,7 @@ import { ethers } from "ethers";
 import { trimAddress } from "../utils/ethereum";
 import { useMoralisWeb3Api } from "react-moralis";
 import { getNFTData } from "../utils/data";
+import { addressToEns } from "../utils/ens";
 import TokenDisplay from "../components/TokenDisplay";
 
 const contractAddress = "0x10E62cFbb59e4fE4319c026ec5Ec19de90665a2d";
@@ -26,6 +27,9 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
   const [askNFTs, setAskNFTs] = useState([]);
   const [offerTokens, setOfferTokens] = useState([]);
   const [askTokens, setAskTokens] = useState([]);
+  const [otherAddress, setOtherAddress] = useState(
+    sent ? offer.target : offer.offerer
+  );
 
   const Web3Api = useMoralisWeb3Api();
   const toast = useToast();
@@ -146,7 +150,16 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
     getData();
   }, [offer]);
 
-  const otherAddress = sent ? offer.target : offer.offerer;
+  useEffect(() => {
+    const resolveENS = async () => {
+      const ens = await addressToEns(otherAddress);
+      if (ens) {
+        setOtherAddress(ens);
+      }
+    };
+
+    resolveENS();
+  }, []);
 
   const rescindOffer = async (offer) => {
     try {
