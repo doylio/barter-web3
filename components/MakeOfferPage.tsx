@@ -314,7 +314,7 @@ export default function MakeOfferPage({ address }: { address: string }) {
             )}
           </Flex>
           <Box mt="10" mb="10">
-            <img src="/arrows.svg" />
+            <img src="./arrows.svg" />
           </Box>
           {txnLoading ? (
             <Spinner />

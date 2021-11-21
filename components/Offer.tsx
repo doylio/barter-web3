@@ -331,7 +331,7 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
             ) : sent ? (
               <>
                 <Box mt="6" mb="6">
-                  <img src="/pending.svg" />
+                  <img src="./pending.svg" />
                 </Box>
                 <Text
                   cursor="pointer"
@@ -350,7 +350,7 @@ const Offer: FC<{ sent: boolean; offer: any; refreshData: () => void }> = ({
             ) : (
               <>
                 <Box mt="6" mb="6">
-                  <img src="/arrows.svg" />
+                  <img src="./arrows.svg" />
                 </Box>
                 <Button width="80%" onClick={handleAcceptClick} mb={5}>
                   Accept
