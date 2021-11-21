@@ -11,6 +11,10 @@ export default function Home() {
   const [address, setAddress] = useState("");
   const router = useRouter();
 
+  const goToOffer = () => {
+    if (address) window.location.href = `/offer/?address=${address}`;
+  };
+
   return (
     <Layout>
       <Head title="Barter Web3" />
@@ -48,6 +52,7 @@ export default function Home() {
           <Input
             val={address}
             onChange={(e) => setAddress(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && goToOffer()}
             height="60px"
             mt="50"
             mb="30"
@@ -65,7 +70,7 @@ export default function Home() {
             width="40%"
             placeholder="Address / ENS"
           />
-          <Button width="40%" onClick={() => router.push(`/offer/${address}`)}>
+          <Button width="40%" onClick={() => goToOffer()}>
             Search
           </Button>
         </Flex>
