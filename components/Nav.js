@@ -4,8 +4,9 @@ import { ethers } from "ethers";
 import Link from "next/link";
 import { useMoralis } from "react-moralis";
 
-import { hasEthereum } from "../utils/ethereum";
+import { hasEthereum, trimAddress } from "../utils/ethereum";
 import Button from "./Button";
+import { addressToEns } from "../utils/ens";
 
 const Nav = () => {
   const [connectedWalletAddress, setConnectedWalletAddressState] = useState("");
@@ -22,14 +23,22 @@ const Nav = () => {
       const signer = provider.getSigner();
       try {
         const signerAddress = await signer.getAddress();
-        setConnectedWalletAddressState(`${signerAddress}`);
-      } catch {
+        const resolvedAddress = await resolveAddress(signerAddress);
+        setConnectedWalletAddressState(resolvedAddress);
+      } catch (err) {
+        console.log(err);
         setConnectedWalletAddressState(null);
         return;
       }
     }
     setConnectedWalletAddress();
   }, [isAuthenticated]);
+
+  async function resolveAddress(address) {
+    const ensName = await addressToEns(address);
+    if (ensName) return ensName;
+    return trimAddress(address);
+  }
 
   return (
     <Flex p="5" width="100%" justifyContent="space-between">
@@ -41,8 +50,7 @@ const Nav = () => {
       <Flex alignItems="center" flexDirection="row">
         {isAuthenticated && connectedWalletAddress ? (
           <Text fontWeight="700" mr="5">
-            {connectedWalletAddress.slice(0, 6)}...
-            {connectedWalletAddress.slice(-4)}
+            {connectedWalletAddress}
           </Text>
         ) : (
           <Button onClick={authenticate}>Connect Wallet</Button>
