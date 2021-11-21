@@ -85,11 +85,8 @@ export default function MakeOffer() {
       return;
     }
     try {
-      if (address.includes(".eth")) {
-        const res = await ensToAddress(address as string);
-        return res;
-      }
-      return address;
+      const resolvedAddress = await ensToAddress(address);
+      return resolvedAddress;
     } catch (err) {
       toast({
         title: "An error occured",
