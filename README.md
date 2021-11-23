@@ -1,3 +1,24 @@
+## The Project
+
+This project is an application to allow 2 users to barter with each other for arbitrary assets.  The inspiration for this came out of MMO RPG games, where players can trade with each other in game, by proposing that they exchange some group of items for some other group.  In our application, a user can type in an address or ENS name, and they will be brought to a screen to propose a trade.  They will select any group of NFTs and ERC20s from their wallet, and any group of NFTs and ERC20s from the other users wallet.  They can then propose a trade, where they will be prompted to approve the barter contract to transfer those assets, before creating the trade in the smart contract.
+
+<img width="717" alt="Screen Shot 2021-11-21 at 12 28 33 PM" src="https://user-images.githubusercontent.com/17352012/143093211-739cd21c-46eb-43fb-a985-8d0559da2065.png">
+
+
+## Tech Details
+
+We built this project with a smart contract backend, written in solidity.  It is responsible to keeping track of offers made between users, and for handling the transfer of assets between users if the offer is accepted.  We created the smart contract with Hardhat, and built an extensive test suite.  
+
+For the frontend, we used NextJS and Ethers to create the client app.  We originally wanted to use the Covalent API to fetch the list of ERC20 and ERC721s from an account, but we kept getting timeout errors so eventually switched to Moralis.  The app needed to use the server to fetch a list of all NFTs and ERC20 in the 2 users accounts so the trade could be constructed.  This also turned out to be problematic, because Moralis does not catalogue on all assets on Rinkeby, the testate we deployed to.  So at present, the fetching of assets is broken
+
+We also needed the frontend to make sure all transfers were approved before the trade was created or accepted.  This meant a lot of complicated ethers code to ensure no gas was wasted in a trade that was not ready.
+
+For resolving ENS names, we used the Ethers ens functions.
+
+We deployed our client on IPFS.  To do this, we originally used a local IPFS node, but eventually migrated to fleek.co for convenience.  This was much more difficult than anticipated because many of the abilities and properties of a web server are not available on IPFS.  For example, we originally had multiple pages with dynamic routing.  `/offer/brantly.eth` would resolve to the create offer page with the brantley.eth address as the target.  However on IPFS, this could not be achieved, as everything resolved to a simple file system.  
+
+To get around this, we reorganized the client to render in a single page.  We feel that it would be possible to have different routes for different pages, but with time constraints, we decided not to attempt that for this project.
+
 ## Getting Started
 
 ### Environment Setup
